@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { TypeChip } from "@/components/TypeChip";
 import { Combobox, type ComboboxOption } from "@/components/Combobox";
@@ -72,6 +72,15 @@ const MAX_EV_TOTAL = 66;
 const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"] as const;
 type StatKey = (typeof STAT_KEYS)[number];
 
+// Items that change a Pokémon's effective Speed. Used to badge the row sprite
+// in the speed-tier table so the user can see at a glance why a threat is
+// faster/slower than its raw base stat would suggest.
+const SPEED_MODIFYING_ITEMS = new Set(["choice-scarf", "iron-ball"]);
+
+function itemSpriteUrl(slug: string): string {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`;
+}
+
 type Build = {
   slug: string;
   ability: string;
@@ -81,6 +90,11 @@ type Build = {
   ev: [number, number, number, number, number, number];
   stages: { atk: number; def: number; spa: number; spd: number; spe: number };
 };
+
+// Per-target overrides applied on top of the usage-derived default build.
+// Lives in BuilderBody state and flows through Speed/Offense/Defense cards.
+type TargetOverrides = Partial<Pick<Build, "ability" | "item" | "nature" | "ev" | "stages">>;
+type TargetOverridesMap = Map<string, TargetOverrides>;
 
 const ANALYSIS_TABS = [
   { id: "speed", labelKey: "tabSpeed" },
@@ -275,6 +289,7 @@ function BuilderBody({
 }) {
   const t = useTranslations("PokemonBuilder");
   const [activeTab, setActiveTab] = useState<AnalysisTabId>("speed");
+  const [targetOverrides, setTargetOverrides] = useState<TargetOverridesMap>(new Map());
   const p = pokemonBySlug.get(build.slug);
   if (!p) return null;
 
@@ -284,6 +299,23 @@ function BuilderBody({
 
   // Reset to a fresh species pick — clears all overrides.
   function reset() { setBuild(null); }
+
+  function updateTargetOverride(slug: string, mut: (cur: TargetOverrides) => TargetOverrides) {
+    setTargetOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(slug, mut(next.get(slug) ?? {}));
+      return next;
+    });
+  }
+
+  function resetTargetOverride(slug: string) {
+    setTargetOverrides((prev) => {
+      if (!prev.has(slug)) return prev;
+      const next = new Map(prev);
+      next.delete(slug);
+      return next;
+    });
+  }
 
   function focusAnalysisTab(id: AnalysisTabId) {
     setActiveTab(id);
@@ -379,7 +411,17 @@ function BuilderBody({
           hidden={activeTab !== "speed"}
           className="mt-4 min-w-0"
         >
-          <SpeedTierCard p={p} build={build} targets={targets} />
+          <SpeedTierCard
+            p={p}
+            build={build}
+            targets={targets}
+            targetOverrides={targetOverrides}
+            updateTargetOverride={updateTargetOverride}
+            resetTargetOverride={resetTargetOverride}
+            itemBySlug={itemBySlug}
+            abilityBySlug={abilityBySlug}
+            allItems={allItems}
+          />
         </div>
         <div
           role="tabpanel"
@@ -393,6 +435,7 @@ function BuilderBody({
             build={build}
             targets={targets}
             moveBySlug={moveBySlug}
+            targetOverrides={targetOverrides}
           />
         </div>
         <div
@@ -407,6 +450,7 @@ function BuilderBody({
             build={build}
             targets={targets}
             moveBySlug={moveBySlug}
+            targetOverrides={targetOverrides}
           />
         </div>
       </section>
@@ -807,15 +851,28 @@ function SpeedTierCard({
   p,
   build,
   targets,
+  targetOverrides,
+  updateTargetOverride,
+  resetTargetOverride,
+  itemBySlug,
+  abilityBySlug,
+  allItems,
 }: {
   p: BuilderRefPokemon;
   build: Build;
   targets: BuilderRefPokemon[];
+  targetOverrides: TargetOverridesMap;
+  updateTargetOverride: (slug: string, mut: (cur: TargetOverrides) => TargetOverrides) => void;
+  resetTargetOverride: (slug: string) => void;
+  itemBySlug: Map<string, BuilderRefItem>;
+  abilityBySlug: Map<string, BuilderRefAbility>;
+  allItems: BuilderRefItem[];
 }) {
   const t = useTranslations("PokemonBuilder");
 
   const [mods, setMods] = useState({ tailwind: false, scarf: false });
   // Stages already in build; expose Tailwind / Scarf as overlay multipliers.
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
 
   const mySpe = useMemo(() => {
     let s = computeStat(p.spe, build.ev[5], build.nature, "spe", false);
@@ -828,15 +885,11 @@ function SpeedTierCard({
 
   const rows = useMemo(() => {
     return targets.map((tp) => {
-      const u = tp.usage;
-      const spread = u?.topSpreads[0];
-      const nat = (spread?.nature ?? "Hardy") as Nature;
-      const ev = spread?.vp[5] ?? 0;
-      let s = computeStat(tp.spe, ev, nat, "spe", false);
-      if (u?.topItems[0]?.slug === "choice-scarf") s = Math.floor(s * 1.5);
-      return { p: tp, spe: s };
+      const tb = resolveTargetBuild(tp, targetOverrides.get(tp.slug));
+      const s = speedFromBuild(tp, tb);
+      return { p: tp, spe: s, build: tb };
     }).sort((a, b) => b.spe - a.spe);
-  }, [targets]);
+  }, [targets, targetOverrides]);
 
   return (
     <Card
@@ -877,26 +930,77 @@ function SpeedTierCard({
                 ? "text-emerald-600"
                 : diff < 0 ? "text-red-600" : "text-zinc-500";
               const label = diff > 0 ? t("outspeed") : diff < 0 ? t("outsped") : t("tied");
+              const editing = editingSlug === r.p.slug;
+              const customized = targetOverrides.has(r.p.slug);
+              const speedItem = SPEED_MODIFYING_ITEMS.has(r.build.item) ? r.build.item : null;
+              const speedItemName = speedItem
+                ? itemBySlug.get(speedItem)?.name ?? speedItem
+                : null;
               return (
-                <tr key={r.p.slug} className={cn(
-                  "border-b border-zinc-100 last:border-b-0 dark:border-zinc-800",
-                  r.p.slug === build.slug && "bg-zinc-50 dark:bg-zinc-900/50",
-                )}>
-                  <td className="px-2 py-1.5 text-zinc-400 font-mono tabular-nums">{i + 1}</td>
-                  <td className="px-2 py-1.5">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Image src={r.p.spriteUrl} alt="" width={24} height={24} unoptimized />
-                      <span className="font-medium">{r.p.name}</span>
-                    </span>
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-zinc-500">
-                    {r.p.usagePct > 0 ? `${r.p.usagePct.toFixed(1)}%` : "—"}
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-mono tabular-nums">{r.spe}</td>
-                  <td className={cn("px-2 py-1.5 text-right font-mono tabular-nums", tone)}>
-                    {label} ({diff > 0 ? "+" : ""}{diff})
-                  </td>
-                </tr>
+                <Fragment key={r.p.slug}>
+                  <tr className={cn(
+                    "border-b border-zinc-100 last:border-b-0 dark:border-zinc-800",
+                    r.p.slug === build.slug && "bg-zinc-50 dark:bg-zinc-900/50",
+                    editing && "bg-amber-50/60 dark:bg-amber-950/20",
+                  )}>
+                    <td className="px-2 py-1.5 text-zinc-400 font-mono tabular-nums">{i + 1}</td>
+                    <td className="px-2 py-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setEditingSlug(editing ? null : r.p.slug)}
+                        aria-expanded={editing}
+                        aria-label={t("editConfigFor", { name: r.p.name })}
+                        className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left -mx-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                      >
+                        <span className="relative inline-block shrink-0">
+                          <Image src={r.p.spriteUrl} alt="" width={24} height={24} unoptimized />
+                          {speedItem ? (
+                            <Image
+                              src={itemSpriteUrl(speedItem)}
+                              alt=""
+                              width={14}
+                              height={14}
+                              unoptimized
+                              title={speedItemName ?? speedItem}
+                              className="absolute -bottom-1 -right-1 rounded-full bg-white shadow-sm ring-1 ring-zinc-300 dark:bg-zinc-900 dark:ring-zinc-700"
+                            />
+                          ) : null}
+                        </span>
+                        <span className="font-medium">{r.p.name}</span>
+                        {customized ? (
+                          <span
+                            className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
+                            title={t("customized")}
+                            aria-label={t("customized")}
+                          />
+                        ) : null}
+                      </button>
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-mono tabular-nums text-zinc-500">
+                      {r.p.usagePct > 0 ? `${r.p.usagePct.toFixed(1)}%` : "—"}
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-mono tabular-nums">{r.spe}</td>
+                    <td className={cn("px-2 py-1.5 text-right font-mono tabular-nums", tone)}>
+                      {label} ({diff > 0 ? "+" : ""}{diff})
+                    </td>
+                  </tr>
+                  {editing ? (
+                    <tr className="border-b border-zinc-200 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-950/40">
+                      <td colSpan={5} className="px-3 py-3">
+                        <TargetEditor
+                          p={r.p}
+                          build={r.build}
+                          customized={customized}
+                          onChange={(mut) => updateTargetOverride(r.p.slug, mut)}
+                          onReset={() => resetTargetOverride(r.p.slug)}
+                          onClose={() => setEditingSlug(null)}
+                          abilityBySlug={abilityBySlug}
+                          allItems={allItems}
+                        />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               );
             })}
           </tbody>
@@ -913,11 +1017,13 @@ function OffenseMatrixCard({
   build,
   targets,
   moveBySlug,
+  targetOverrides,
 }: {
   p: BuilderRefPokemon;
   build: Build;
   targets: BuilderRefPokemon[];
   moveBySlug: Map<string, BuilderRefMove>;
+  targetOverrides: TargetOverridesMap;
 }) {
   const t = useTranslations("PokemonBuilder");
 
@@ -964,6 +1070,7 @@ function OffenseMatrixCard({
                         attacker={p}
                         attackerBuild={build}
                         defender={tp}
+                        defenderBuild={resolveTargetBuild(tp, targetOverrides.get(tp.slug))}
                         move={m}
                       />
                     </td>
@@ -985,11 +1092,13 @@ function DefenseMatrixCard({
   build,
   targets,
   moveBySlug,
+  targetOverrides,
 }: {
   p: BuilderRefPokemon;
   build: Build;
   targets: BuilderRefPokemon[];
   moveBySlug: Map<string, BuilderRefMove>;
+  targetOverrides: TargetOverridesMap;
 }) {
   const t = useTranslations("PokemonBuilder");
 
@@ -1042,6 +1151,7 @@ function DefenseMatrixCard({
                     p={p}
                     build={build}
                     target={tt.p}
+                    targetBuild={resolveTargetBuild(tt.p, targetOverrides.get(tt.p.slug))}
                     targetMoves={tt.moves}
                     myDamagingMoves={myDamagingMoves}
                     mySpeed={mySpeed}
@@ -1055,6 +1165,7 @@ function DefenseMatrixCard({
                       <ThreatChip
                         key={m.slug}
                         attacker={tt.p}
+                        attackerBuild={resolveTargetBuild(tt.p, targetOverrides.get(tt.p.slug))}
                         defender={p}
                         defenderBuild={build}
                         move={m}
@@ -1075,6 +1186,7 @@ function OutcomeBadge({
   p,
   build,
   target,
+  targetBuild,
   targetMoves,
   myDamagingMoves,
   mySpeed,
@@ -1082,12 +1194,12 @@ function OutcomeBadge({
   p: BuilderRefPokemon;
   build: Build;
   target: BuilderRefPokemon;
+  targetBuild: Build;
   targetMoves: BuilderRefMove[];
   myDamagingMoves: BuilderRefMove[];
   mySpeed: number;
 }) {
   const t = useTranslations("PokemonBuilder");
-  const targetBuild = defenderDefaultBuild(target);
   const theirSpeed = speedFromBuild(target, targetBuild);
 
   // Best of my damaging moves against this target → highest OHKO%.
@@ -1258,22 +1370,204 @@ function CustomTargetsCard({
   );
 }
 
+// ─── Per-target editor ───────────────────────────────────────────────────────
+
+function TargetEditor({
+  p,
+  build,
+  customized,
+  onChange,
+  onReset,
+  onClose,
+  abilityBySlug,
+  allItems,
+}: {
+  p: BuilderRefPokemon;
+  build: Build;
+  customized: boolean;
+  onChange: (mut: (cur: TargetOverrides) => TargetOverrides) => void;
+  onReset: () => void;
+  onClose: () => void;
+  abilityBySlug: Map<string, BuilderRefAbility>;
+  allItems: BuilderRefItem[];
+}) {
+  const t = useTranslations("PokemonBuilder");
+  const tStat = useTranslations("TeamBuilder.evStat");
+  const tStatShort = useTranslations("StatShort");
+  const tNature = useTranslations("Natures");
+
+  const validAbilities = useMemo(() => {
+    const arr = [...p.abilities];
+    if (p.hiddenAbility && !arr.includes(p.hiddenAbility)) arr.push(p.hiddenAbility);
+    return arr;
+  }, [p]);
+  const pctByAbility = useMemo(
+    () => new Map(p.usage?.topAbilities.map((a) => [a.slug, a.pct]) ?? []),
+    [p],
+  );
+  const pctByItem = useMemo(
+    () => new Map(p.usage?.topItems.map((i) => [i.slug, i.pct]) ?? []),
+    [p],
+  );
+
+  const abilityOptions: ComboboxOption[] = validAbilities.map((a) => {
+    const ref = abilityBySlug.get(a);
+    return {
+      value: a,
+      label: ref?.name ?? a,
+      searchText: a,
+      usagePct: pctByAbility.get(a),
+      suffix: p.hiddenAbility === a ? "★" : null,
+    };
+  });
+  const itemOptions: ComboboxOption[] = allItems.map((it) => ({
+    value: it.slug,
+    label: it.name,
+    searchText: it.slug,
+    usagePct: pctByItem.get(it.slug),
+  }));
+  const natureOptions: ComboboxOption[] = NATURES.map((n) => {
+    const { up, down } = natureEffect(n);
+    const localized = tNature(n as never);
+    const annot = up && down
+      ? ` +${tStatShort(up)} −${tStatShort(down)}`
+      : ` ${tNature("neutralSuffix")}`;
+    return { value: n, label: localized + annot, searchText: n };
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Image src={p.spriteUrl} alt="" width={28} height={28} unoptimized />
+          <div>
+            <div className="text-sm font-semibold">{t("editConfigFor", { name: p.name })}</div>
+            <div className="text-[11px] text-zinc-500">
+              {customized ? t("customized") : t("usingUsageDefaults")}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {customized ? (
+            <button
+              type="button"
+              onClick={onReset}
+              className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              {t("resetCustomization")}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {t("closeEditor")}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div>
+          <Label>{t("ability")}</Label>
+          <Combobox
+            value={build.ability}
+            onChange={(v) => onChange((cur) => ({ ...cur, ability: v }))}
+            options={abilityOptions}
+          />
+        </div>
+        <div>
+          <Label>{t("item")}</Label>
+          <Combobox
+            value={build.item}
+            onChange={(v) => onChange((cur) => ({ ...cur, item: v }))}
+            options={itemOptions}
+            allowClear
+          />
+        </div>
+        <div>
+          <Label>{t("nature")}</Label>
+          <Combobox
+            value={build.nature}
+            onChange={(v) => onChange((cur) => ({ ...cur, nature: v as Nature }))}
+            options={natureOptions}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>{t("evs")}</Label>
+          <div className="mt-1 grid grid-cols-3 gap-1.5 text-xs">
+            {STAT_KEYS.map((k, i) => (
+              <label key={k} className="flex items-center gap-1.5">
+                <span className="w-9 shrink-0 font-semibold uppercase text-zinc-500">
+                  {tStat(k as StatKey)}
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={PER_STAT_CAP}
+                  step={1}
+                  value={build.ev[i] ?? 0}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(PER_STAT_CAP, parseInt(e.target.value) || 0));
+                    const next = [...build.ev] as Build["ev"];
+                    next[i] = v;
+                    onChange((cur) => ({ ...cur, ev: next }));
+                  }}
+                  className="w-full rounded-md border border-zinc-300 bg-white px-1.5 py-0.5 text-right font-mono tabular-nums dark:border-zinc-700 dark:bg-zinc-900"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label>{t("stages")}</Label>
+          <div className="mt-1 grid grid-cols-2 gap-1.5 text-xs sm:grid-cols-3">
+            {(["atk","def","spa","spd","spe"] as const).map((k) => (
+              <label key={k} className="flex items-center gap-1.5">
+                <span className="w-9 shrink-0 font-semibold uppercase text-zinc-500">
+                  {tStat(k as StatKey)}
+                </span>
+                <Stepper
+                  value={build.stages[k]}
+                  min={-6}
+                  max={6}
+                  onChange={(v) => onChange((cur) => ({
+                    ...cur,
+                    stages: { ...build.stages, [k]: v },
+                  }))}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── Damage cells ────────────────────────────────────────────────────────────
 
 function DamageCell({
   attacker,
   attackerBuild,
   defender,
+  defenderBuild,
   move,
 }: {
   attacker: BuilderRefPokemon;
   attackerBuild: Build;
   defender: BuilderRefPokemon;
+  defenderBuild: Build;
   move: BuilderRefMove;
 }) {
   const result = useMemo(
-    () => runCalc(attacker, attackerBuild, defender, defenderDefaultBuild(defender), move),
-    [attacker, attackerBuild, defender, move],
+    () => runCalc(attacker, attackerBuild, defender, defenderBuild, move),
+    [attacker, attackerBuild, defender, defenderBuild, move],
   );
   if (!result) return <span className="text-zinc-400">—</span>;
   const { minPct, maxPct, ohkoPct, twoHkoPct } = result;
@@ -1298,18 +1592,20 @@ function DamageCell({
 
 function ThreatChip({
   attacker,
+  attackerBuild,
   defender,
   defenderBuild,
   move,
 }: {
   attacker: BuilderRefPokemon;
+  attackerBuild: Build;
   defender: BuilderRefPokemon;
   defenderBuild: Build;
   move: BuilderRefMove;
 }) {
   const result = useMemo(
-    () => runCalc(attacker, attackerDefaultBuild(attacker), defender, defenderBuild, move),
-    [attacker, defender, defenderBuild, move],
+    () => runCalc(attacker, attackerBuild, defender, defenderBuild, move),
+    [attacker, attackerBuild, defender, defenderBuild, move],
   );
   if (!result) return null;
   const { minPct, maxPct, ohkoPct, twoHkoPct } = result;
@@ -1429,6 +1725,22 @@ function defenderDefaultBuild(p: BuilderRefPokemon): Build {
   // Defenders use the same usage-derived spread as attackers; the defensive
   // stats just come from the EV row's HP/Def/SpD slots.
   return attackerDefaultBuild(p);
+}
+
+// Resolve a target's effective Build by layering user overrides on top of the
+// usage-derived default. Used everywhere the user's customizations should
+// affect speed/damage analysis.
+function resolveTargetBuild(p: BuilderRefPokemon, overrides?: TargetOverrides): Build {
+  const base = defenderDefaultBuild(p);
+  if (!overrides) return base;
+  return {
+    ...base,
+    ability: overrides.ability ?? base.ability,
+    item: overrides.item ?? base.item,
+    nature: overrides.nature ?? base.nature,
+    ev: overrides.ev ?? base.ev,
+    stages: overrides.stages ?? base.stages,
+  };
 }
 
 function runCalc(

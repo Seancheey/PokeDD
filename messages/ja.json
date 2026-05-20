@@ -23,7 +23,7 @@
   "Hub": {
     "regulationBadge": "レギュ M-A",
     "regulationLabel": "現行レギュレーション",
-    "heroTitle": "数秒でポケモンチャンピオンズのチームを構築・共有・検証。",
+    "heroTitle": "pokeDD — ポケモンチャンピオンズ ツール",
     "heroSubtitle": "アカウント不要。ログイン不要。URLでチームを共有。",
     "ctaTeamBuilder": "チーム作成を開く →",
     "ctaDamageCalc": "ダメージ計算",
@@ -239,7 +239,11 @@
     "importFromSaved": "マイポケモンから",
     "noSavedMons": "まだ保存したポケモンがありません。チーム作成の ★ から保存してください。",
     "swap": "入れ替え",
-    "swapSides": "攻撃側と防御側を入れ替え"
+    "swapSides": "攻撃側と防御側を入れ替え",
+    "formLabel": "フォルム",
+    "formShield": "シールド",
+    "formBlade": "ブレード",
+    "bladeFormBadge": "ブレードフォルム（攻撃時）"
   },
   "TeamBuilder": {
     "title": "チーム作成",
@@ -400,7 +404,12 @@
     "outcomeLose": "負け — 下から落とされる",
     "customTitle": "カスタム比較",
     "customHint": "上位30以外のポケモンを追加して両表に反映できます。",
-    "addCustomPlaceholder": "ポケモンを追加…"
+    "addCustomPlaceholder": "ポケモンを追加…",
+    "editConfigFor": "{name} の構成を編集",
+    "customized": "カスタム済み",
+    "usingUsageDefaults": "使用率データの既定値を使用中",
+    "resetCustomization": "既定値に戻す",
+    "closeEditor": "閉じる"
   },
   "Placeholder": {
     "back": "ハブに戻る",
@@ -423,7 +432,7 @@
     "neutralSuffix": "(変化なし)"
   },
   "StatShort": {
-    "atk": "攻撃", "def": "防御", "spa": "特攻", "spd": "特防", "spe": "素早さ"
+    "hp": "HP", "atk": "攻撃", "def": "防御", "spa": "特攻", "spd": "特防", "spe": "素早さ"
   },
   "Types": {
     "normal": "ノーマル",

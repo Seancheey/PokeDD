@@ -23,7 +23,7 @@
   "Hub": {
     "regulationBadge": "规则 M-A",
     "regulationLabel": "当前规则",
-    "heroTitle": "数秒内构筑、分享并测试你的宝可梦冠军赛队伍。",
+    "heroTitle": "口袋滴滴 — 宝可梦冠军工具",
     "heroSubtitle": "无需账号。无需登录。一条 URL 即可分享。",
     "ctaTeamBuilder": "打开队伍构筑 →",
     "ctaDamageCalc": "伤害计算",
@@ -239,7 +239,11 @@
     "importFromSaved": "从我的宝可梦",
     "noSavedMons": "暂无保存的宝可梦。从队伍构筑界面点 ★ 即可保存。",
     "swap": "互换",
-    "swapSides": "互换攻防双方"
+    "swapSides": "互换攻防双方",
+    "formLabel": "形态",
+    "formShield": "盾牌",
+    "formBlade": "刀剑",
+    "bladeFormBadge": "刀剑形态（攻击时）"
   },
   "TeamBuilder": {
     "title": "队伍构筑",
@@ -400,7 +404,12 @@
     "outcomeLose": "稳输 — 被先制秒杀",
     "customTitle": "自定义对比",
     "customHint": "添加任何不在前30的宝可梦,将同步加入两个表格。",
-    "addCustomPlaceholder": "添加宝可梦…"
+    "addCustomPlaceholder": "添加宝可梦…",
+    "editConfigFor": "自定义 {name} 配置",
+    "customized": "已自定义",
+    "usingUsageDefaults": "使用使用率默认配置",
+    "resetCustomization": "恢复默认",
+    "closeEditor": "关闭"
   },
   "Placeholder": {
     "back": "返回主页",
@@ -423,7 +432,7 @@
     "neutralSuffix": "(无变化)"
   },
   "StatShort": {
-    "atk": "攻击", "def": "防御", "spa": "特攻", "spd": "特防", "spe": "速度"
+    "hp": "HP", "atk": "攻击", "def": "防御", "spa": "特攻", "spd": "特防", "spe": "速度"
   },
   "Types": {
     "normal": "一般",

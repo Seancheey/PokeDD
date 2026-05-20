@@ -23,7 +23,7 @@
   "Hub": {
     "regulationBadge": "Reg M-A",
     "regulationLabel": "Current Regulation",
-    "heroTitle": "Build, share, and stress-test Pokémon Champions teams in seconds.",
+    "heroTitle": "pokeDD — Pokémon Champions Toolkit",
     "heroSubtitle": "No account. No login. Share a team with a URL.",
     "ctaTeamBuilder": "Open Team Builder →",
     "ctaDamageCalc": "Damage Calculator",
@@ -239,7 +239,11 @@
     "importFromSaved": "From My Pokémon",
     "noSavedMons": "No saved Pokémon yet. Save one from the Team Builder ★.",
     "swap": "Swap",
-    "swapSides": "Swap attacker and defender"
+    "swapSides": "Swap attacker and defender",
+    "formLabel": "Form",
+    "formShield": "Shield",
+    "formBlade": "Blade",
+    "bladeFormBadge": "Blade Form (attacking)"
   },
   "TeamBuilder": {
     "title": "Team Builder",
@@ -400,7 +404,12 @@
     "outcomeLose": "Lose — OHKO'd before you act",
     "customTitle": "Custom comparisons",
     "customHint": "Add any Pokémon not in the top 30 to extend both tables.",
-    "addCustomPlaceholder": "Add a Pokémon…"
+    "addCustomPlaceholder": "Add a Pokémon…",
+    "editConfigFor": "Customize {name}",
+    "customized": "Customized",
+    "usingUsageDefaults": "Using usage-data defaults",
+    "resetCustomization": "Reset to default",
+    "closeEditor": "Close"
   },
   "Placeholder": {
     "back": "Back to hub",
@@ -423,7 +432,7 @@
     "neutralSuffix": "(neutral)"
   },
   "StatShort": {
-    "atk": "Atk", "def": "Def", "spa": "SpA", "spd": "SpD", "spe": "Spe"
+    "hp": "HP", "atk": "Atk", "def": "Def", "spa": "SpA", "spd": "SpD", "spe": "Spe"
   },
   "Types": {
     "normal": "Normal",

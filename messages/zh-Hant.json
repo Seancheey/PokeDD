@@ -23,7 +23,7 @@
   "Hub": {
     "regulationBadge": "規則 M-A",
     "regulationLabel": "現行規則",
-    "heroTitle": "幾秒鐘內構築、分享並測試你的寶可夢冠軍賽隊伍。",
+    "heroTitle": "口袋滴滴 — 寶可夢冠軍工具",
     "heroSubtitle": "無需帳號。無需登入。一條 URL 即可分享。",
     "ctaTeamBuilder": "開啟隊伍構築 →",
     "ctaDamageCalc": "傷害計算",
@@ -239,7 +239,11 @@
     "importFromSaved": "從我的寶可夢",
     "noSavedMons": "尚未儲存任何寶可夢。在隊伍構築介面點 ★ 即可儲存。",
     "swap": "互換",
-    "swapSides": "互換攻守雙方"
+    "swapSides": "互換攻守雙方",
+    "formLabel": "形態",
+    "formShield": "盾牌",
+    "formBlade": "刀劍",
+    "bladeFormBadge": "刀劍形態（攻擊時）"
   },
   "TeamBuilder": {
     "title": "隊伍構築",
@@ -400,7 +404,12 @@
     "outcomeLose": "穩輸 — 被先制秒殺",
     "customTitle": "自訂對比",
     "customHint": "新增任何不在前30的寶可夢,將同步加入兩個表格。",
-    "addCustomPlaceholder": "新增寶可夢…"
+    "addCustomPlaceholder": "新增寶可夢…",
+    "editConfigFor": "自訂 {name} 配置",
+    "customized": "已自訂",
+    "usingUsageDefaults": "使用使用率預設配置",
+    "resetCustomization": "還原預設",
+    "closeEditor": "關閉"
   },
   "Placeholder": {
     "back": "返回主頁",
@@ -423,7 +432,7 @@
     "neutralSuffix": "(無變化)"
   },
   "StatShort": {
-    "atk": "攻擊", "def": "防禦", "spa": "特攻", "spd": "特防", "spe": "速度"
+    "hp": "HP", "atk": "攻擊", "def": "防禦", "spa": "特攻", "spd": "特防", "spe": "速度"
   },
   "Types": {
     "normal": "一般",
