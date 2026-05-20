@@ -212,6 +212,7 @@ export function TeamBuilderClient({
           i: topItem,
           m: topMoves,
           v: topSpread?.vp ?? [0, 0, 0, 0, 0, 0],
+          n: topSpread?.nature,
         },
       ],
     }));
@@ -235,6 +236,7 @@ export function TeamBuilderClient({
               i: mon.item || undefined,
               m: mon.moves.filter(Boolean),
               v: mon.ev,
+              n: mon.nature,
             },
           ],
         };
@@ -743,7 +745,6 @@ function SlotBody({
   const t = useTranslations("TeamBuilder");
   const tStat = useTranslations("TeamBuilder.evStat");
   const tNature = useTranslations("Natures");
-  const tType = useTranslations("Types");
 
   // Per-slot usage lookups (top moves/abilities/items/spreads with %)
   const pctByMove = new Map(p.usage?.topMoves.map((m) => [m.slug, m.pct]) ?? []);
@@ -832,22 +833,6 @@ function SlotBody({
     };
   });
 
-  // Tera type — all 18 types, localized.
-  const teraOptions: ComboboxOption[] = POKEMON_TYPES.map((tp) => {
-    let label: string;
-    try {
-      label = tType(tp as never);
-    } catch {
-      label = tp;
-    }
-    return {
-      value: tp,
-      label,
-      searchText: tp,
-      prefix: <TypeChip type={tp} size="sm" />,
-    };
-  });
-
   return (
     <div className="mt-3 space-y-2 text-sm">
       <Field label={t("abilityLabel")}>
@@ -908,31 +893,17 @@ function SlotBody({
         </div>
       </div>
 
-      {/* Nature + Tera — two-column row */}
-      <div className="grid grid-cols-2 gap-2">
-        <Field label={t("natureLabel")}>
-          <Combobox
-            value={slot.n ?? ""}
-            options={natureOptions}
-            onChange={(v) => onMutate((s) => ({ ...s, n: v || undefined }))}
-            ariaLabel={t("natureLabel")}
-            allowClear
-            emptyLabel={t("natureNeutral")}
-            placeholder={t("natureNeutral")}
-          />
-        </Field>
-        <Field label={t("teraLabel")}>
-          <Combobox
-            value={slot.t ?? ""}
-            options={teraOptions}
-            onChange={(v) => onMutate((s) => ({ ...s, t: v || undefined }))}
-            ariaLabel={t("teraLabel")}
-            allowClear
-            emptyLabel="—"
-            placeholder="—"
-          />
-        </Field>
-      </div>
+      <Field label={t("natureLabel")}>
+        <Combobox
+          value={slot.n ?? ""}
+          options={natureOptions}
+          onChange={(v) => onMutate((s) => ({ ...s, n: v || undefined }))}
+          ariaLabel={t("natureLabel")}
+          allowClear
+          emptyLabel={t("natureNeutral")}
+          placeholder={t("natureNeutral")}
+        />
+      </Field>
 
       {/* Spread preset */}
       {spreadOptions.length > 0 ? (
@@ -1479,11 +1450,6 @@ function ImportModal({
                         {slot.i ? (
                           <span className="text-xs text-zinc-500">
                             @ {slot.i.replace(/-/g, " ")}
-                          </span>
-                        ) : null}
-                        {slot.t ? (
-                          <span className="text-xs text-zinc-500">
-                            · Tera {slot.t}
                           </span>
                         ) : null}
                       </div>
