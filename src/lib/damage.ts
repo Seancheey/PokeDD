@@ -140,6 +140,14 @@ const SOUND_MOVES = new Set([
   "uproar", "growl", "screech", "sing", "supersonic", "perish-song",
   "metal-sound", "chatter", "relic-song", "noble-roar",
 ]);
+// Slicing moves — boosted ×1.5 by the Sharpness ability (Gen 9).
+const SLICING_MOVES = new Set([
+  "aerial-ace", "air-cutter", "air-slash", "aqua-cutter", "behemoth-blade",
+  "bitter-blade", "ceaseless-edge", "cross-poison", "cut", "fury-cutter",
+  "kowtow-cleave", "leaf-blade", "night-slash", "population-bomb", "psyblade",
+  "psycho-cut", "razor-leaf", "razor-shell", "sacred-sword", "secret-sword",
+  "slash", "solar-blade", "stone-axe", "x-scissor",
+]);
 const SECONDARY_EFFECT_MOVES = new Set([
   // moves with non-100% secondary effects that benefit Sheer Force
   "ice-beam", "thunderbolt", "flamethrower", "shadow-ball", "sludge-bomb",
@@ -228,6 +236,7 @@ function isPunch(slug: string): boolean { return PUNCH_MOVES.has(slug); }
 function isBite(slug: string): boolean { return BITE_MOVES.has(slug); }
 function isPulse(slug: string): boolean { return PULSE_MOVES.has(slug); }
 function isSound(slug: string): boolean { return SOUND_MOVES.has(slug); }
+function isSlicing(slug: string): boolean { return SLICING_MOVES.has(slug); }
 function hasSecondary(slug: string): boolean { return SECONDARY_EFFECT_MOVES.has(slug); }
 function isRecoil(slug: string): boolean { return RECOIL_MOVES.has(slug); }
 
@@ -754,6 +763,9 @@ export function calc(input: CalcInput): CalcOutput | null {
   }
   if (a.ability === "iron-fist" && isPunch(move.slug)) {
     dmg = Math.floor(dmg * 1.2); notes.push("Iron Fist ×1.2");
+  }
+  if (a.ability === "sharpness" && isSlicing(move.slug)) {
+    dmg = Math.floor(dmg * 1.5); notes.push("Sharpness ×1.5");
   }
   if (a.ability === "punk-rock" && isSound(move.slug)) {
     dmg = Math.floor(dmg * 1.3); notes.push("Punk Rock atk ×1.3");
