@@ -290,6 +290,8 @@
     "netColumn": "Net (resists − weaknesses)",
     "offenseWeakColumn": "Members with no super-effective move",
     "offenseStrongColumn": "Members with a super-effective move",
+    "matchupAttacks": "When attacking",
+    "matchupDefends": "When defending",
     "loading": "Loading…",
     "invalidShare": "Couldn't decode share link. Starting fresh.",
     "natureLabel": "Nature",

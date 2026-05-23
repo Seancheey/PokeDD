@@ -290,6 +290,8 @@
     "netColumn": "差分 (半減数 − 弱点数)",
     "offenseWeakColumn": "効果バツグン無しのメンバー数",
     "offenseStrongColumn": "効果バツグン有りのメンバー数",
+    "matchupAttacks": "攻撃時",
+    "matchupDefends": "防御時",
     "loading": "読み込み中…",
     "invalidShare": "共有リンクをデコードできませんでした。空のチームから始めます。",
     "natureLabel": "性格",

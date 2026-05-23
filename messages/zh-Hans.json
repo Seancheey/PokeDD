@@ -290,6 +290,8 @@
     "netColumn": "净差 (半减数 − 弱点数)",
     "offenseWeakColumn": "无效果绝佳招式的成员数",
     "offenseStrongColumn": "有效果绝佳招式的成员数",
+    "matchupAttacks": "进攻时",
+    "matchupDefends": "防御时",
     "loading": "加载中…",
     "invalidShare": "分享链接解析失败,从空队伍开始。",
     "natureLabel": "性格",

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { TypeChip } from "@/components/TypeChip";
+import { TypeMatchupTooltip } from "@/components/TypeMatchupTooltip";
 import { Combobox, type ComboboxOption } from "@/components/Combobox";
 import type { PokemonType } from "@/lib/types";
 import { POKEMON_TYPES } from "@/lib/types";
@@ -1083,7 +1084,7 @@ function TeamDefenseTable({
               return (
                 <tr key={atkType}>
                   <td className="px-2 py-1.5">
-                    <TypeChip type={atkType} size="sm" />
+                    <TypeMatchupTooltip type={atkType} size="sm" />
                   </td>
                   {cells.map((c, i) => {
                     const tone = defenseTone(c.mult);
@@ -1167,7 +1168,7 @@ function TeamOffenseTable({
               return (
                 <tr key={defType}>
                   <td className="px-2 py-1.5">
-                    <TypeChip type={defType} size="sm" />
+                    <TypeMatchupTooltip type={defType} size="sm" />
                   </td>
                   {cells.map((c, i) => {
                     const tone = offenseTone(c.mult);
