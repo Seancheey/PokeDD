@@ -13,9 +13,8 @@ async function main() {
         m: ["earthquake", "dragon-claw"],
         v: [1, 32, 0, 0, 1, 32],
         n: "Jolly",
-        t: "steel",
       },
-      { s: "indeedee-female", a: "psychic-surge", n: "Calm", t: "fairy" },
+      { s: "indeedee-female", a: "psychic-surge", n: "Calm" },
     ],
   };
   const enc = await encodeTeam(team);

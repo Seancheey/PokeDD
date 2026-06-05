@@ -416,6 +416,7 @@ async function main() {
   // POKEMON ───────────────────────────────────────────────────────────────────
   const pokemonRows = readCsv<{
     id: string; identifier: string; species_id: string; is_default: string;
+    height: string; weight: string;
   }>("pokemon.csv");
   const speciesNameRows = readCsv<Record<string, string>>("pokemon_species_names.csv");
   const statRows = readCsv<{ pokemon_id: string; stat_id: string; base_stat: string }>("pokemon_stats.csv");
@@ -857,6 +858,7 @@ async function main() {
       spa: stats[4] ?? 0,
       spd: stats[5] ?? 0,
       spe: stats[6] ?? 0,
+      weight: num(p.weight),
       abilities: JSON.stringify(abs.normal),
       hiddenAbility: abs.hidden,
       // Use pokemon.id (not species_id) so non-default forms get their own art.

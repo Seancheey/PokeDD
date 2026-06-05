@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { TypeChip } from "@/components/TypeChip";
+import { CategoryBadge } from "@/components/CategoryBadge";
 import { Combobox, type ComboboxOption } from "@/components/Combobox";
 import type { PokemonType } from "@/lib/types";
 import {
@@ -28,6 +29,7 @@ export type CalcRefPokemon = {
   type2: string | null;
   spriteUrl: string;
   hp: number; atk: number; def: number; spa: number; spd: number; spe: number;
+  weight: number;
   abilities: string[];
   hiddenAbility: string | null;
   learnableMoves: string[];
@@ -46,7 +48,8 @@ export type CalcRefPokemon = {
 export type CalcRefMove = {
   slug: string; name: string; type: string;
   category: string; // "physical" | "special" | "status"
-  power: number;
+  // NULL = variable-BP move (Heavy Slam, Low Kick, …); resolved at calc time.
+  power: number | null;
   targetShape: string;
 };
 export type CalcRefAbility = { slug: string; name: string };
@@ -104,6 +107,7 @@ export function DamageCalcClient({
   items: CalcRefItem[];
 }) {
   const t = useTranslations("DamageCalc");
+  const tTypes = useTranslations("Types");
 
   const monBySlug = useMemo(
     () => new Map(pokemon.map((p) => [p.slug, p])),
@@ -120,6 +124,10 @@ export function DamageCalcClient({
   const [atk, setAtk] = useState<SideState>(() => defaultSide(undefined, true));
   const [def, setDef] = useState<SideState>(() => defaultSide(undefined, false));
   const [moveSlug, setMoveSlug] = useState<string>("");
+  // Aegislash defender form. Attacker is always treated as Blade (Stance Change
+  // fires on any damaging move). Defender's form is user-controlled because
+  // Aegislash can be incoming-hit in either stance.
+  const [defAegislashForm, setDefAegislashForm] = useState<"shield" | "blade">("shield");
 
   const [weather, setWeather] = useState<Weather>("none");
   const [terrain, setTerrain] = useState<Terrain>("none");
@@ -152,6 +160,7 @@ export function DamageCalcClient({
 
   function pickDefenderSpecies(slug: string) {
     setDef(defaultSide(monBySlug.get(slug), false));
+    setDefAegislashForm("shield");
   }
 
   // Swap attacker ↔ defender, then re-suggest a damage move for the new
@@ -176,10 +185,15 @@ export function DamageCalcClient({
 
   // Apply a saved-mon config to a side (and, when attacker, seed the move).
   function applySavedMon(mon: SavedMon, side: "attacker" | "defender") {
-    const p = monBySlug.get(mon.slug);
+    // Aegislash is exposed in the picker as the shield-form slug only. If the
+    // saved mon was stored as the blade slug, normalize it back to shield so
+    // the species dropdown reflects it. Defender starts in Shield form.
+    const normalizedSlug =
+      mon.slug === "aegislash-blade" ? "aegislash-shield" : mon.slug;
+    const p = monBySlug.get(normalizedSlug);
     if (!p) return;
     const next: SideState = {
-      slug: mon.slug,
+      slug: normalizedSlug,
       ability: mon.ability || p.abilities[0] || "",
       item: mon.item || "",
       nature: (mon.nature as Nature) || "Hardy",
@@ -202,6 +216,7 @@ export function DamageCalcClient({
       setMoveSlug(chosen ?? "");
     } else {
       setDef(next);
+      if (normalizedSlug === "aegislash-shield") setDefAegislashForm("shield");
     }
   }
 
@@ -209,17 +224,30 @@ export function DamageCalcClient({
   const defenderMon = monBySlug.get(def.slug);
   const move = moveBySlug.get(moveSlug);
 
+  // Aegislash stance resolution. The species picker only exposes
+  // aegislash-shield; the actual stats used for the calc depend on which side
+  // it's on. Attacker → always Blade Form. Defender → user-selected.
+  const attackerStatsMon =
+    attackerMon?.slug === "aegislash-shield"
+      ? monBySlug.get("aegislash-blade") ?? attackerMon
+      : attackerMon;
+  const defenderStatsMon =
+    defenderMon?.slug === "aegislash-shield" && defAegislashForm === "blade"
+      ? monBySlug.get("aegislash-blade") ?? defenderMon
+      : defenderMon;
+
   const result: CalcOutput | null = useMemo(() => {
-    if (!attackerMon || !defenderMon || !move) return null;
-    if (move.category === "status" || move.power <= 0) return null;
+    if (!attackerStatsMon || !defenderStatsMon || !move) return null;
+    if (move.category === "status") return null;
     return calc({
       attacker: {
-        slug: attackerMon.slug,
-        types: [attackerMon.type1 as PokemonType, attackerMon.type2 as PokemonType | null],
-        atk: attackerMon.atk, spa: attackerMon.spa,
-        def: attackerMon.def, spd: attackerMon.spd,
+        slug: attackerStatsMon.slug,
+        types: [attackerStatsMon.type1 as PokemonType, attackerStatsMon.type2 as PokemonType | null],
+        atk: attackerStatsMon.atk, spa: attackerStatsMon.spa,
+        def: attackerStatsMon.def, spd: attackerStatsMon.spd, spe: attackerStatsMon.spe,
+        weight: attackerStatsMon.weight,
         vpAtk: atk.vp[1], vpSpa: atk.vp[3],
-        vpDef: atk.vp[2], vpSpd: atk.vp[4],
+        vpDef: atk.vp[2], vpSpd: atk.vp[4], vpSpe: atk.vp[5],
         nature: atk.nature,
         ability: atk.ability || undefined,
         item: atk.item || undefined,
@@ -228,12 +256,13 @@ export function DamageCalcClient({
         stageDef: atk.stageDef, stageSpd: atk.stageSpd,
       },
       defender: {
-        slug: defenderMon.slug,
-        types: [defenderMon.type1 as PokemonType, defenderMon.type2 as PokemonType | null],
-        hp: defenderMon.hp, def: defenderMon.def, spd: defenderMon.spd,
-        atk: defenderMon.atk, spa: defenderMon.spa,
+        slug: defenderStatsMon.slug,
+        types: [defenderStatsMon.type1 as PokemonType, defenderStatsMon.type2 as PokemonType | null],
+        hp: defenderStatsMon.hp, def: defenderStatsMon.def, spd: defenderStatsMon.spd, spe: defenderStatsMon.spe,
+        atk: defenderStatsMon.atk, spa: defenderStatsMon.spa,
+        weight: defenderStatsMon.weight,
         vpHp: def.vp[0], vpDef: def.vp[2], vpSpd: def.vp[4],
-        vpAtk: def.vp[1], vpSpa: def.vp[3],
+        vpAtk: def.vp[1], vpSpa: def.vp[3], vpSpe: def.vp[5],
         nature: def.nature,
         ability: def.ability || undefined,
         item: def.item || undefined,
@@ -246,7 +275,10 @@ export function DamageCalcClient({
         slug: move.slug,
         type: move.type as PokemonType,
         category: move.category as "physical" | "special",
-        power: move.power,
+        // Variable-BP moves come in as null; calc resolves from state. Passing 0
+        // keeps the existing `move.power <= 0` branch happy for any remaining
+        // unresolvable case.
+        power: move.power ?? 0,
         targetShape: move.targetShape,
       },
       field: {
@@ -256,14 +288,20 @@ export function DamageCalcClient({
       },
     });
   }, [
-    attackerMon, defenderMon, move, atk, def,
+    attackerStatsMon, defenderStatsMon, move, atk, def,
     weather, terrain, format, crit, helpingHand,
     reflect, lightScreen, auroraVeil, stealthRock, spikes,
   ]);
 
   const speciesOptions: ComboboxOption[] = useMemo(
     () =>
-      pokemon.map((p) => ({
+      pokemon
+        // Aegislash has two DB rows (shield + blade), but for the user it's one
+        // species — the form is derived from context (attacker = blade,
+        // defender = user-chosen). Hide the blade row from the picker so it
+        // appears as a single "Aegislash" entry.
+        .filter((p) => p.slug !== "aegislash-blade")
+        .map((p) => ({
         value: p.slug,
         label: p.name,
         searchText: p.slug,
@@ -289,19 +327,21 @@ export function DamageCalcClient({
   );
 
   // Move options scoped to attacker's learnset, damage moves only.
+  // Variable-BP moves (Heavy Slam, Low Kick, …) have power===null; keep them
+  // and label as "var" — calc resolves BP from weight/speed/HP at runtime.
   const moveOptions: ComboboxOption[] = useMemo(() => {
     if (!attackerMon) return [];
     const learn = new Set(attackerMon.learnableMoves);
     const pctByMove = new Map(attackerMon.usage?.topMoves.map((m) => [m.slug, m.pct]) ?? []);
     return moves
-      .filter((m) => m.category !== "status" && m.power > 0 && learn.has(m.slug))
+      .filter((m) => m.category !== "status" && learn.has(m.slug))
       .map((m) => ({
         value: m.slug,
-        label: `${m.name} · ${m.type} · ${m.power}`,
+        label: `${m.name} · ${tTypes(m.type)} · ${m.power ?? "var"}`,
         searchText: m.slug,
         usagePct: pctByMove.get(m.slug),
       }));
-  }, [attackerMon, moves]);
+  }, [attackerMon, moves, tTypes]);
 
   const allEmpty = !atk.slug && !def.slug && !moveSlug;
 
@@ -334,6 +374,8 @@ export function DamageCalcClient({
           itemBySlug={itemBySlug}
           onApplySaved={(mon) => applySavedMon(mon, "attacker")}
           isAttacker
+          moveSlug={moveSlug}
+          aegislashBladeBadge={attackerMon?.slug === "aegislash-shield"}
         />
         <FlowArrow />
         <MoveCard
@@ -358,6 +400,12 @@ export function DamageCalcClient({
           items={items}
           itemBySlug={itemBySlug}
           onApplySaved={(mon) => applySavedMon(mon, "defender")}
+          moveSlug={moveSlug}
+          aegislashFormToggle={
+            defenderMon?.slug === "aegislash-shield"
+              ? { value: defAegislashForm, onChange: setDefAegislashForm }
+              : undefined
+          }
         />
       </section>
 
@@ -453,14 +501,12 @@ function MoveCard({
         <div className="mt-3 space-y-2 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <TypeChip type={move.type as PokemonType} size="sm" />
-            <span className="text-xs uppercase tracking-wider text-zinc-500">
-              {move.category}
-            </span>
+            <CategoryBadge cat={move.category} />
           </div>
           <dl className="grid grid-cols-2 gap-1 text-xs">
             <dt className="text-zinc-500">{t("powerLabel")}</dt>
             <dd className="text-right font-mono tabular-nums">
-              {move.power > 0 ? move.power : "—"}
+              {move.power && move.power > 0 ? move.power : "—"}
             </dd>
           </dl>
         </div>
@@ -488,6 +534,9 @@ function SidePanel({
   itemBySlug,
   onApplySaved,
   isAttacker,
+  moveSlug,
+  aegislashBladeBadge,
+  aegislashFormToggle,
 }: {
   title: string;
   side: SideState;
@@ -501,6 +550,9 @@ function SidePanel({
   itemBySlug: Map<string, CalcRefItem>;
   onApplySaved: (mon: SavedMon) => void;
   isAttacker?: boolean;
+  moveSlug: string;
+  aegislashBladeBadge?: boolean;
+  aegislashFormToggle?: { value: "shield" | "blade"; onChange: (v: "shield" | "blade") => void };
 }) {
   const t = useTranslations("DamageCalc");
   const tNature = useTranslations("Natures");
@@ -550,16 +602,30 @@ function SidePanel({
     setSide((s) => ({ ...s, [key]: Math.max(-6, Math.min(6, value)) }));
   }
 
-  // Show offensive stages for attacker, defensive for defender
-  const stageRows: Array<{ key: "stageAtk" | "stageDef" | "stageSpa" | "stageSpd"; label: string }> = isAttacker
-    ? [
-        { key: "stageAtk", label: "Atk" },
-        { key: "stageSpa", label: "SpA" },
-      ]
-    : [
-        { key: "stageDef", label: "Def" },
-        { key: "stageSpd", label: "SpD" },
-      ];
+  // Show stages relevant to the selected move. Body Press uses attacker Def,
+  // so swap Atk for Def on the attacker. Foul Play uses defender's Atk, so add
+  // it to the defender's defensive pair.
+  type StageKey = "stageAtk" | "stageDef" | "stageSpa" | "stageSpd";
+  const stageRows: Array<{ key: StageKey; label: string }> = isAttacker
+    ? moveSlug === "body-press"
+      ? [
+          { key: "stageDef", label: tStat("def") },
+          { key: "stageSpa", label: tStat("spa") },
+        ]
+      : [
+          { key: "stageAtk", label: tStat("atk") },
+          { key: "stageSpa", label: tStat("spa") },
+        ]
+    : moveSlug === "foul-play"
+      ? [
+          { key: "stageAtk", label: tStat("atk") },
+          { key: "stageDef", label: tStat("def") },
+          { key: "stageSpd", label: tStat("spd") },
+        ]
+      : [
+          { key: "stageDef", label: tStat("def") },
+          { key: "stageSpd", label: tStat("spd") },
+        ];
 
   return (
     <article className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -591,9 +657,14 @@ function SidePanel({
             allowClear
           />
           {mon ? (
-            <div className="mt-2 flex flex-wrap gap-1">
+            <div className="mt-2 flex flex-wrap items-center gap-1">
               <TypeChip type={mon.type1 as PokemonType} size="sm" />
               {mon.type2 ? <TypeChip type={mon.type2 as PokemonType} size="sm" /> : null}
+              {aegislashBladeBadge ? (
+                <span className="ml-1 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-red-700 dark:bg-red-950/60 dark:text-red-300">
+                  {t("bladeFormBadge")}
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -603,6 +674,31 @@ function SidePanel({
         <p className="mt-3 text-xs italic text-zinc-400">
           {isAttacker ? t("pickAttackerHint") : t("pickDefenderHint")}
         </p>
+      ) : null}
+
+      {mon && aegislashFormToggle ? (
+        <div className="mt-3 flex items-center gap-2 text-xs">
+          <span className="font-semibold uppercase tracking-wider text-zinc-500">
+            {t("formLabel")}:
+          </span>
+          <div className="inline-flex overflow-hidden rounded-md border border-zinc-300 dark:border-zinc-700">
+            {(["shield", "blade"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => aegislashFormToggle.onChange(f)}
+                className={cn(
+                  "px-2.5 py-1 font-medium",
+                  aegislashFormToggle.value === f
+                    ? "bg-zinc-900 text-white dark:bg-zinc-200 dark:text-zinc-900"
+                    : "bg-white text-zinc-600 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
+                )}
+              >
+                {t(f === "shield" ? "formShield" : "formBlade")}
+              </button>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       {mon ? (
@@ -650,9 +746,9 @@ function SidePanel({
           {t("evLabel")}
         </div>
         <div className="mt-1 grid grid-cols-3 gap-1.5 text-xs">
-          {(["HP","Atk","Def","SpA","SpD","Spe"] as const).map((label, i) => (
-            <label key={label} className="flex items-center gap-1">
-              <span className="w-8 shrink-0 text-zinc-500">{label}</span>
+          {(["hp","atk","def","spa","spd","spe"] as const).map((key, i) => (
+            <label key={key} className="flex items-center gap-1">
+              <span className="w-8 shrink-0 text-zinc-500">{tStat(key)}</span>
               <input
                 type="number" min={0} max={32} step={1}
                 value={side.vp[i]}

@@ -409,10 +409,15 @@ export type CalcInput = {
     /** Optional — needed only for Body Press (uses user's Def for offense). */
     def?: number;
     spd?: number;
+    /** Optional — needed only for speed-ratio moves (Electro Ball, Gyro Ball). */
+    spe?: number;
     vpAtk: number;
     vpSpa: number;
     vpDef?: number;
     vpSpd?: number;
+    vpSpe?: number;
+    /** Hectograms (PokeAPI native). Needed for Heavy Slam / Heat Crash. */
+    weight?: number;
     nature: Nature;
     ability?: string;
     item?: string;
@@ -431,11 +436,16 @@ export type CalcInput = {
     /** Optional — needed only for Foul Play (uses defender's Atk for offense). */
     atk?: number;
     spa?: number;
+    /** Optional — needed only for speed-ratio moves (Electro Ball, Gyro Ball). */
+    spe?: number;
     vpHp: number;
     vpDef: number;
     vpSpd: number;
     vpAtk?: number;
     vpSpa?: number;
+    vpSpe?: number;
+    /** Hectograms (PokeAPI native). Needed for Low Kick / Grass Knot / Heavy Slam. */
+    weight?: number;
     nature: Nature;
     ability?: string;
     item?: string;
@@ -505,11 +515,124 @@ function hazardChipPct(defender: CalcInput["defender"], hazards: Hazards): numbe
   return Math.min(pct, 100);
 }
 
+// ─── Variable base-power resolver ────────────────────────────────────────────
+// Moves whose BP depends on attacker/defender state. PokeAPI lists these with
+// NULL power; we compute the in-battle BP here. Returns null if the move's BP
+// isn't state-dependent (caller falls back to move.power).
+
+function resolveVariableBP(input: CalcInput): { bp: number; note: string } | null {
+  const { attacker: a, defender: d, move } = input;
+  const slug = move.slug;
+
+  // ── Weight-based: attacker / defender ratio ──
+  if (slug === "heavy-slam" || slug === "heat-crash") {
+    if (!a.weight || !d.weight) return null;
+    const ratio = a.weight / d.weight;
+    let bp = 40;
+    if (ratio >= 5) bp = 120;
+    else if (ratio >= 4) bp = 100;
+    else if (ratio >= 3) bp = 80;
+    else if (ratio >= 2) bp = 60;
+    return { bp, note: `${slug === "heavy-slam" ? "Heavy Slam" : "Heat Crash"} BP ${bp} (weight ratio ${ratio.toFixed(2)}×)` };
+  }
+
+  // ── Weight-based: defender weight in kg ──
+  if (slug === "low-kick" || slug === "grass-knot") {
+    if (!d.weight) return null;
+    const kg = d.weight / 10;
+    let bp = 20;
+    if (kg >= 200) bp = 120;
+    else if (kg >= 100) bp = 100;
+    else if (kg >= 50) bp = 80;
+    else if (kg >= 25) bp = 60;
+    else if (kg >= 10) bp = 40;
+    return { bp, note: `${slug === "low-kick" ? "Low Kick" : "Grass Knot"} BP ${bp} (defender ${kg.toFixed(1)} kg)` };
+  }
+
+  // ── Defender HP %: Hard Press / Crush Grip / Wring Out ──
+  // Hard Press: 1..100 BP. Crush Grip / Wring Out: 1..120 BP.
+  if (slug === "hard-press") {
+    const bp = Math.max(1, Math.floor((100 * d.hpPct) / 100));
+    return { bp, note: `Hard Press BP ${bp} (defender ${d.hpPct}% HP)` };
+  }
+  if (slug === "crush-grip" || slug === "wring-out") {
+    const bp = Math.max(1, Math.floor((120 * d.hpPct) / 100));
+    return { bp, note: `${slug === "crush-grip" ? "Crush Grip" : "Wring Out"} BP ${bp} (defender ${d.hpPct}% HP)` };
+  }
+
+  // ── Speed-based ──
+  // Gyro Ball: 25 × (defender Spe / attacker Spe), capped 150.
+  // Electro Ball: tiered by Spe ratio.
+  const speedFor = (s: CalcInput["attacker"] | CalcInput["defender"]): number | null => {
+    if (s.spe == null) return null;
+    const vp = s.vpSpe ?? 0;
+    return computeStat(s.spe, vp, s.nature, "spe");
+  };
+  if (slug === "gyro-ball") {
+    const aSpe = speedFor(a); const dSpe = speedFor(d);
+    if (!aSpe || dSpe == null) return null;
+    const bp = Math.max(1, Math.min(150, Math.floor((25 * dSpe) / aSpe)));
+    return { bp, note: `Gyro Ball BP ${bp} (Spe ${dSpe}/${aSpe})` };
+  }
+  if (slug === "electro-ball") {
+    const aSpe = speedFor(a); const dSpe = speedFor(d);
+    if (aSpe == null || !dSpe) return null;
+    const ratio = aSpe / dSpe;
+    let bp = 40;
+    if (ratio >= 4) bp = 150;
+    else if (ratio >= 3) bp = 120;
+    else if (ratio >= 2) bp = 80;
+    else if (ratio >= 1) bp = 60;
+    return { bp, note: `Electro Ball BP ${bp} (Spe ratio ${ratio.toFixed(2)}×)` };
+  }
+
+  // ── Friendship-based (competitive always assumes max friendship = 102 BP) ──
+  if (slug === "return" || slug === "frustration" || slug === "pika-papow" || slug === "veevee-volley") {
+    return { bp: 102, note: `${slug} BP 102 (max friendship)` };
+  }
+
+  // ── Stat-stage based ──
+  // Stored Power / Power Trip: 20 + 20 × attacker positive stages (atk/def/spa/spd only — UI doesn't track spe/acc/eva stages).
+  if (slug === "stored-power" || slug === "power-trip") {
+    const boosts =
+      Math.max(0, a.stageAtk) + Math.max(0, a.stageSpa) +
+      Math.max(0, a.stageDef ?? 0) + Math.max(0, a.stageSpd ?? 0);
+    const bp = Math.min(860, 20 + 20 * boosts);
+    return { bp, note: `${slug === "stored-power" ? "Stored Power" : "Power Trip"} BP ${bp} (+${boosts} stages)` };
+  }
+  // Punishment: 60 + 20 × defender positive stages, capped 200.
+  if (slug === "punishment") {
+    const boosts =
+      Math.max(0, d.stageAtk ?? 0) + Math.max(0, d.stageSpa ?? 0) +
+      Math.max(0, d.stageDef) + Math.max(0, d.stageSpd);
+    const bp = Math.min(200, 60 + 20 * boosts);
+    return { bp, note: `Punishment BP ${bp} (+${boosts} defender stages)` };
+  }
+
+  // ── Attacker HP %: Flail / Reversal ──
+  // UI doesn't track attacker HP %. Default to 100% → minimum 20 BP. The
+  // resulting damage shown is the "full HP" floor; users with a pinch-HP setup
+  // can mentally bump it.
+  if (slug === "flail" || slug === "reversal") {
+    const hpPct = 100;
+    let bp = 20;
+    if (hpPct <= 4) bp = 200;
+    else if (hpPct <= 9) bp = 150;
+    else if (hpPct <= 20) bp = 100;
+    else if (hpPct <= 35) bp = 80;
+    else if (hpPct <= 68) bp = 40;
+    return { bp, note: `${slug === "flail" ? "Flail" : "Reversal"} BP ${bp} (attacker assumed full HP)` };
+  }
+
+  return null;
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 export function calc(input: CalcInput): CalcOutput | null {
   const { attacker: a, defender: d, move } = input;
-  if (move.power <= 0) return null;
+  const variableBp = resolveVariableBP(input);
+  if (move.power <= 0 && !variableBp) return null;
 
   // Some moves are scripted to always crit. Auto-set field.crit so the 1.5×
   // gets baked in everywhere — UI doesn't have to remember to toggle it.
@@ -647,10 +770,11 @@ export function calc(input: CalcInput): CalcOutput | null {
 
   // ── Type tweaks via attacker abilities (e.g. Refrigerate makes Normal→Ice) ─
   let moveType: PokemonType = move.type;
-  let basePower = move.power;
+  let basePower = variableBp ? variableBp.bp : move.power;
+  if (variableBp) notes.push(variableBp.note);
   const aetherKind: Record<string, PokemonType> = {
     "refrigerate": "ice", "pixilate": "fairy", "galvanize": "electric",
-    "aerilate": "flying", "normalize": "normal",
+    "aerilate": "flying", "normalize": "normal", "dragonize": "dragon",
   };
   if (a.ability && aetherKind[a.ability] && move.type === "normal") {
     moveType = aetherKind[a.ability];

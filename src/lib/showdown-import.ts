@@ -37,7 +37,6 @@ export type ImportWarningKind =
   | "iv-ignored"
   | "level-ignored"
   | "happiness-ignored"
-  | "tera-unknown"
   | "nature-unknown"
   | "empty-block";
 
@@ -94,12 +93,6 @@ const NATURE_NAMES = new Set([
   "Modest", "Mild", "Bashful", "Rash", "Quiet",
   "Calm", "Gentle", "Careful", "Sassy", "Quirky",
   "Timid", "Hasty", "Jolly", "Naive", "Serious",
-]);
-
-const TERA_TYPES = new Set([
-  "normal", "fire", "water", "electric", "grass", "ice",
-  "fighting", "poison", "ground", "flying", "psychic", "bug",
-  "rock", "ghost", "dragon", "dark", "steel", "fairy",
 ]);
 
 function toSlug(raw: string): string {
@@ -506,20 +499,8 @@ export function parseShowdownText(
       }
     }
 
-    // Tera Type
-    if (parsed.teraType) {
-      const teraSlug = parsed.teraType.toLowerCase();
-      if (TERA_TYPES.has(teraSlug)) {
-        slot.t = teraSlug;
-      } else {
-        warnings.push({
-          slotIndex,
-          speciesName,
-          kind: "tera-unknown",
-          detail: `Tera type "${parsed.teraType}" not supported (try one of the 18 standard types).`,
-        });
-      }
-    }
+    // Tera Type — Champions disables Terastallization, so silently drop any
+    // pasted "Tera Type:" line. We still parse it for future use (warning-free).
 
     slots.push(slot);
   }

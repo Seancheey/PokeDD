@@ -20,8 +20,6 @@ export type ShareSlot = {
   v?: [number, number, number, number, number, number];
   /** nature name (e.g. "Adamant"). Added 2026-05; absent in older links. */
   n?: string;
-  /** Tera type slug (e.g. "fire"). Added 2026-05; absent in older links. */
-  t?: string;
 };
 
 export type TeamShare = {

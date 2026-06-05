@@ -56,6 +56,7 @@ export default async function DamageCalcPage({
       type2: p.type2,
       spriteUrl: p.spriteUrl,
       hp: p.hp, atk: p.atk, def: p.def, spa: p.spa, spd: p.spd, spe: p.spe,
+      weight: p.weight,
       abilities: JSON.parse(p.abilities) as string[],
       hiddenAbility: p.hiddenAbility,
       learnableMoves: JSON.parse(p.learnableMoves) as string[],
@@ -68,7 +69,8 @@ export default async function DamageCalcPage({
     name: localizedMoveName(m, loc),
     type: m.type,
     category: m.category,
-    power: m.power ?? 0,
+    // NULL in DB ⇒ variable-BP move; resolved at calc time from species state.
+    power: m.power ?? null,
     targetShape: m.targetShape,
   }));
   const refAbilities: CalcRefAbility[] = abilities.map((a) => ({

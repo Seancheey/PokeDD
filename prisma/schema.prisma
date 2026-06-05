@@ -27,6 +27,9 @@ model Pokemon {
   spa         Int
   spd         Int
   spe         Int
+  // Body weight in hectograms (PokeAPI native unit). Used by variable-BP
+  // moves: Heavy Slam, Heat Crash, Hard Press, Low Kick, Grass Knot.
+  weight      Int      @default(0)
   abilities   String   // JSON-encoded array of ability slugs (SQLite has no native array)
   hiddenAbility String?
   spriteUrl   String
