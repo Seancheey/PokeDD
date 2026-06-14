@@ -146,6 +146,29 @@ export function PokemonBuilderClient({
 
   const [build, setBuild] = useState<Build | null>(null);
   const [customSlugs, setCustomSlugs] = useState<string[]>([]);
+  // The comparison tables seed with the meta's most-used Pokémon by default.
+  // Users can clear these to compare only against their own custom picks.
+  const [includeDefaults, setIncludeDefaults] = useState(true);
+  // Default Pokémon the user has individually deleted from the tables (custom
+  // picks are removed by dropping them from `customSlugs` instead).
+  const [removedSlugs, setRemovedSlugs] = useState<string[]>([]);
+
+  const addCustom = (slug: string) => {
+    setRemovedSlugs((prev) => prev.filter((s) => s !== slug));
+    setCustomSlugs((prev) => (prev.includes(slug) ? prev : [...prev, slug]));
+  };
+  const removeTarget = (slug: string) => {
+    if (customSlugs.includes(slug)) {
+      setCustomSlugs((prev) => prev.filter((s) => s !== slug));
+    } else {
+      setRemovedSlugs((prev) => (prev.includes(slug) ? prev : [...prev, slug]));
+    }
+  };
+  const toggleDefaults = () => {
+    // Restoring defaults also un-deletes individually-removed ones.
+    if (!includeDefaults) setRemovedSlugs([]);
+    setIncludeDefaults((v) => !v);
+  };
 
   // Subscribe to "load saved mon" events from the My Pokémon FAB — replace
   // the current build with the saved configuration so the user lands in
@@ -165,14 +188,17 @@ export function PokemonBuilderClient({
     });
   }, [pokemonBySlug]);
 
-  // Targets: top 30 + custom additions (deduped, custom appended in order)
+  // Targets: default most-used set (unless cleared) + custom additions
+  // (deduped, custom appended in order), minus any individually-removed rows.
   const targets = useMemo(() => {
-    const seen = new Set(top30.map((p) => p.slug));
+    const removed = new Set(removedSlugs);
+    const base = (includeDefaults ? top30 : []).filter((p) => !removed.has(p.slug));
+    const seen = new Set(base.map((p) => p.slug));
     const customs = customSlugs
       .map((s) => pokemonBySlug.get(s))
-      .filter((p): p is BuilderRefPokemon => !!p && !seen.has(p.slug));
-    return [...top30, ...customs];
-  }, [top30, customSlugs, pokemonBySlug]);
+      .filter((p): p is BuilderRefPokemon => !!p && !seen.has(p.slug) && !removed.has(p.slug));
+    return [...base, ...customs];
+  }, [top30, customSlugs, pokemonBySlug, includeDefaults, removedSlugs]);
 
   function selectPokemon(slug: string) {
     const p = pokemonBySlug.get(slug);
@@ -251,7 +277,10 @@ export function PokemonBuilderClient({
           allItems={items}
           targets={targets}
           customSlugs={customSlugs}
-          setCustomSlugs={setCustomSlugs}
+          onAddCustom={addCustom}
+          onRemoveTarget={removeTarget}
+          includeDefaults={includeDefaults}
+          onToggleDefaults={toggleDefaults}
         />
       )}
     </div>
@@ -272,7 +301,10 @@ function BuilderBody({
   allItems,
   targets,
   customSlugs,
-  setCustomSlugs,
+  onAddCustom,
+  onRemoveTarget,
+  includeDefaults,
+  onToggleDefaults,
 }: {
   build: Build;
   setBuild: (b: Build | null | ((prev: Build | null) => Build | null)) => void;
@@ -285,7 +317,10 @@ function BuilderBody({
   allItems: BuilderRefItem[];
   targets: BuilderRefPokemon[];
   customSlugs: string[];
-  setCustomSlugs: (s: string[] | ((prev: string[]) => string[])) => void;
+  onAddCustom: (slug: string) => void;
+  onRemoveTarget: (slug: string) => void;
+  includeDefaults: boolean;
+  onToggleDefaults: () => void;
 }) {
   const t = useTranslations("PokemonBuilder");
   const [activeTab, setActiveTab] = useState<AnalysisTabId>("speed");
@@ -367,9 +402,12 @@ function BuilderBody({
       <ComputedStatsCard p={p} build={build} />
       <CustomTargetsCard
         customSlugs={customSlugs}
-        setCustomSlugs={setCustomSlugs}
+        onAddCustom={onAddCustom}
+        onRemoveTarget={onRemoveTarget}
         pickerOptions={pickerOptions}
         pokemonBySlug={pokemonBySlug}
+        includeDefaults={includeDefaults}
+        onToggleDefaults={onToggleDefaults}
       />
 
       <section className="min-w-0">
@@ -418,6 +456,7 @@ function BuilderBody({
             targetOverrides={targetOverrides}
             updateTargetOverride={updateTargetOverride}
             resetTargetOverride={resetTargetOverride}
+            onRemoveTarget={onRemoveTarget}
             itemBySlug={itemBySlug}
             abilityBySlug={abilityBySlug}
             allItems={allItems}
@@ -436,6 +475,7 @@ function BuilderBody({
             targets={targets}
             moveBySlug={moveBySlug}
             targetOverrides={targetOverrides}
+            onRemoveTarget={onRemoveTarget}
           />
         </div>
         <div
@@ -451,6 +491,7 @@ function BuilderBody({
             targets={targets}
             moveBySlug={moveBySlug}
             targetOverrides={targetOverrides}
+            onRemoveTarget={onRemoveTarget}
           />
         </div>
       </section>
@@ -854,6 +895,7 @@ function SpeedTierCard({
   targetOverrides,
   updateTargetOverride,
   resetTargetOverride,
+  onRemoveTarget,
   itemBySlug,
   abilityBySlug,
   allItems,
@@ -864,6 +906,7 @@ function SpeedTierCard({
   targetOverrides: TargetOverridesMap;
   updateTargetOverride: (slug: string, mut: (cur: TargetOverrides) => TargetOverrides) => void;
   resetTargetOverride: (slug: string) => void;
+  onRemoveTarget: (slug: string) => void;
   itemBySlug: Map<string, BuilderRefItem>;
   abilityBySlug: Map<string, BuilderRefAbility>;
   allItems: BuilderRefItem[];
@@ -939,42 +982,48 @@ function SpeedTierCard({
               return (
                 <Fragment key={r.p.slug}>
                   <tr className={cn(
-                    "border-b border-zinc-100 last:border-b-0 dark:border-zinc-800",
+                    "group border-b border-zinc-100 last:border-b-0 dark:border-zinc-800",
                     r.p.slug === build.slug && "bg-zinc-50 dark:bg-zinc-900/50",
                     editing && "bg-amber-50/60 dark:bg-amber-950/20",
                   )}>
                     <td className="px-2 py-1.5 text-zinc-400 font-mono tabular-nums">{i + 1}</td>
                     <td className="px-2 py-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setEditingSlug(editing ? null : r.p.slug)}
-                        aria-expanded={editing}
-                        aria-label={t("editConfigFor", { name: r.p.name })}
-                        className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left -mx-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
-                      >
-                        <span className="relative inline-block shrink-0">
-                          <Image src={r.p.spriteUrl} alt="" width={24} height={24} unoptimized />
-                          {speedItem ? (
-                            <Image
-                              src={itemSpriteUrl(speedItem)}
-                              alt=""
-                              width={14}
-                              height={14}
-                              unoptimized
-                              title={speedItemName ?? speedItem}
-                              className="absolute -bottom-1 -right-1 rounded-full bg-white shadow-sm ring-1 ring-zinc-300 dark:bg-zinc-900 dark:ring-zinc-700"
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingSlug(editing ? null : r.p.slug)}
+                          aria-expanded={editing}
+                          aria-label={t("editConfigFor", { name: r.p.name })}
+                          className="inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left -mx-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                        >
+                          <span className="relative inline-block shrink-0">
+                            <Image src={r.p.spriteUrl} alt="" width={24} height={24} unoptimized />
+                            {speedItem ? (
+                              <Image
+                                src={itemSpriteUrl(speedItem)}
+                                alt=""
+                                width={14}
+                                height={14}
+                                unoptimized
+                                title={speedItemName ?? speedItem}
+                                className="absolute -bottom-1 -right-1 rounded-full bg-white shadow-sm ring-1 ring-zinc-300 dark:bg-zinc-900 dark:ring-zinc-700"
+                              />
+                            ) : null}
+                          </span>
+                          <span className="font-medium">{r.p.name}</span>
+                          {customized ? (
+                            <span
+                              className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
+                              title={t("customized")}
+                              aria-label={t("customized")}
                             />
                           ) : null}
-                        </span>
-                        <span className="font-medium">{r.p.name}</span>
-                        {customized ? (
-                          <span
-                            className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
-                            title={t("customized")}
-                            aria-label={t("customized")}
-                          />
-                        ) : null}
-                      </button>
+                        </button>
+                        <RowDeleteButton
+                          onClick={() => onRemoveTarget(r.p.slug)}
+                          label={t("removeFromComparison", { name: r.p.name })}
+                        />
+                      </div>
                     </td>
                     <td className="px-2 py-1.5 text-right font-mono tabular-nums text-zinc-500">
                       {r.p.usagePct > 0 ? `${r.p.usagePct.toFixed(1)}%` : "—"}
@@ -1018,12 +1067,14 @@ function OffenseMatrixCard({
   targets,
   moveBySlug,
   targetOverrides,
+  onRemoveTarget,
 }: {
   p: BuilderRefPokemon;
   build: Build;
   targets: BuilderRefPokemon[];
   moveBySlug: Map<string, BuilderRefMove>;
   targetOverrides: TargetOverridesMap;
+  onRemoveTarget: (slug: string) => void;
 }) {
   const t = useTranslations("PokemonBuilder");
 
@@ -1057,11 +1108,15 @@ function OffenseMatrixCard({
             </thead>
             <tbody>
               {targets.map((tp) => (
-                <tr key={tp.slug} className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800">
+                <tr key={tp.slug} className="group border-b border-zinc-100 last:border-b-0 dark:border-zinc-800">
                   <td className="sticky left-0 z-10 bg-white px-2 py-1.5 dark:bg-zinc-900">
                     <span className="inline-flex items-center gap-1.5">
                       <Image src={tp.spriteUrl} alt="" width={22} height={22} unoptimized />
                       <span className="font-medium">{tp.name}</span>
+                      <RowDeleteButton
+                        onClick={() => onRemoveTarget(tp.slug)}
+                        label={t("removeFromComparison", { name: tp.name })}
+                      />
                     </span>
                   </td>
                   {myDamagingMoves.map((m) => (
@@ -1093,12 +1148,14 @@ function DefenseMatrixCard({
   targets,
   moveBySlug,
   targetOverrides,
+  onRemoveTarget,
 }: {
   p: BuilderRefPokemon;
   build: Build;
   targets: BuilderRefPokemon[];
   moveBySlug: Map<string, BuilderRefMove>;
   targetOverrides: TargetOverridesMap;
+  onRemoveTarget: (slug: string) => void;
 }) {
   const t = useTranslations("PokemonBuilder");
 
@@ -1139,11 +1196,15 @@ function DefenseMatrixCard({
           </thead>
           <tbody>
             {targetThreats.map((tt) => (
-              <tr key={tt.p.slug} className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800 align-top">
+              <tr key={tt.p.slug} className="group border-b border-zinc-100 last:border-b-0 dark:border-zinc-800 align-top">
                 <td className="sticky left-0 z-10 bg-white px-2 py-1.5 dark:bg-zinc-900">
                   <span className="inline-flex items-center gap-1.5">
                     <Image src={tt.p.spriteUrl} alt="" width={22} height={22} unoptimized />
                     <span className="font-medium">{tt.p.name}</span>
+                    <RowDeleteButton
+                      onClick={() => onRemoveTarget(tt.p.slug)}
+                      label={t("removeFromComparison", { name: tt.p.name })}
+                    />
                   </span>
                 </td>
                 <td className="px-2 py-1.5">
@@ -1319,14 +1380,20 @@ function OutcomeBadge({
 
 function CustomTargetsCard({
   customSlugs,
-  setCustomSlugs,
+  onAddCustom,
+  onRemoveTarget,
   pickerOptions,
   pokemonBySlug,
+  includeDefaults,
+  onToggleDefaults,
 }: {
   customSlugs: string[];
-  setCustomSlugs: (s: string[] | ((prev: string[]) => string[])) => void;
+  onAddCustom: (slug: string) => void;
+  onRemoveTarget: (slug: string) => void;
   pickerOptions: ComboboxOption[];
   pokemonBySlug: Map<string, BuilderRefPokemon>;
+  includeDefaults: boolean;
+  onToggleDefaults: () => void;
 }) {
   const t = useTranslations("PokemonBuilder");
   const [pick, setPick] = useState("");
@@ -1337,13 +1404,20 @@ function CustomTargetsCard({
           <Combobox
             value={pick}
             onChange={(v) => {
-              if (v && !customSlugs.includes(v)) setCustomSlugs((p) => [...p, v]);
+              if (v) onAddCustom(v);
               setPick("");
             }}
             options={pickerOptions}
             placeholder={t("addCustomPlaceholder")}
           />
         </div>
+        <button
+          type="button"
+          onClick={onToggleDefaults}
+          className="shrink-0 rounded-md border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-red-900 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+        >
+          {includeDefaults ? t("clearDefaults") : t("restoreDefaults")}
+        </button>
       </div>
       {customSlugs.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -1358,7 +1432,7 @@ function CustomTargetsCard({
                 <Image src={p.spriteUrl} alt="" width={18} height={18} unoptimized />
                 {p.name}
                 <button
-                  onClick={() => setCustomSlugs((p) => p.filter((s) => s !== slug))}
+                  onClick={() => onRemoveTarget(slug)}
                   className="ml-1 text-zinc-400 hover:text-red-500"
                 >×</button>
               </span>
@@ -1677,6 +1751,22 @@ function Pill({ active, onClick, label }: { active: boolean; onClick: () => void
       )}
     >
       {label}
+    </button>
+  );
+}
+
+// Per-row delete control for the comparison tables. Hidden until the row is
+// hovered (or the button is keyboard-focused) to keep the tables uncluttered.
+function RowDeleteButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-zinc-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-500 group-hover:opacity-100 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+    >
+      ×
     </button>
   );
 }
