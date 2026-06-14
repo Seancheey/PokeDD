@@ -21,6 +21,8 @@
  *     Ice Scales / Punk Rock (def) / Fluffy / Heatproof / Thick Fat /
  *     Water Absorb / Volt Absorb / Flash Fire / Storm Drain / Lightning Rod /
  *     Sap Sipper / Motor Drive / Levitate / Dry Skin / Wonder Guard
+ *   - Mold Breaker / Teravolt / Turboblaze — ignores the defender's ability
+ *     (Multiscale, Levitate, Thick Fat, Filter, Wonder Guard, absorbs, …)
  *   - Item modifiers — Life Orb / Choice Band / Choice Specs / Expert Belt /
  *     Assault Vest / Eviolite / type-boost plates (×1.2 if matching attacker
  *     move type) / Muscle Band / Wise Glasses
@@ -29,7 +31,6 @@
  * Deliberately NOT modeled (yet):
  *   - Tera type (Champions disables Terastallization in PRD)
  *   - Z-moves / Dynamax (Champions doesn't ship these)
- *   - Mold Breaker bypass (would need flag awareness)
  *   - Move flags (punch/bite/sound/pulse) — approximated by hardcoded slug lists
  */
 
@@ -515,10 +516,33 @@ function hazardChipPct(defender: CalcInput["defender"], hazards: Hazards): numbe
   return Math.min(pct, 100);
 }
 
+// ─── Mold Breaker family ─────────────────────────────────────────────────────
+// These attacker abilities ignore the defender's ability while the move lands —
+// so Multiscale, Levitate, Thick Fat, Flash Fire, Filter, Wonder Guard, etc.
+// all stop applying. Every defender ability the calc models defensively is
+// bypassable, so we simply blank the defender ability when one is active.
+const MOLD_BREAKER_ABILITIES = new Set(["mold-breaker", "teravolt", "turboblaze"]);
+
 // ─── Variable base-power resolver ────────────────────────────────────────────
 // Moves whose BP depends on attacker/defender state. PokeAPI lists these with
 // NULL power; we compute the in-battle BP here. Returns null if the move's BP
 // isn't state-dependent (caller falls back to move.power).
+
+/** Slugs whose base power is computed from battle state (see resolveVariableBP). */
+export const VARIABLE_POWER_MOVES = new Set<string>([
+  "heavy-slam", "heat-crash",
+  "low-kick", "grass-knot",
+  "hard-press", "crush-grip", "wring-out",
+  "gyro-ball", "electro-ball",
+  "return", "frustration", "pika-papow", "veevee-volley",
+  "stored-power", "power-trip", "punishment",
+  "flail", "reversal",
+]);
+
+/** True if the move's BP is state-dependent (PokeAPI ships it with NULL power). */
+export function isVariablePowerMove(slug: string): boolean {
+  return VARIABLE_POWER_MOVES.has(slug);
+}
 
 function resolveVariableBP(input: CalcInput): { bp: number; note: string } | null {
   const { attacker: a, defender: d, move } = input;
@@ -643,19 +667,30 @@ export function calc(input: CalcInput): CalcOutput | null {
   const notes: string[] = [];
   const isPhysical = move.category === "physical";
 
+  // ── Mold Breaker family ──────────────────────────────────────────────────
+  // When the attacker has Mold Breaker / Teravolt / Turboblaze, the defender's
+  // ability is ignored for this hit. `dAbility` is the effective defender
+  // ability used by every defensive check below; the raw `d.ability` is still
+  // used for hazard chip (which isn't part of the attack).
+  const moldBreaker = !!a.ability && MOLD_BREAKER_ABILITIES.has(a.ability);
+  const dAbility = moldBreaker ? undefined : d.ability;
+  if (moldBreaker && d.ability) {
+    notes.push(`${a.ability} ignores ${d.ability}`);
+  }
+
   // ── Ability/Item-based type immunities or absorption ─────────────────────
   // If defender has Water/Volt/Storm Drain/etc., the move is nullified.
-  if (d.ability === "water-absorb" && move.type === "water") return zeroResult(d);
-  if (d.ability === "storm-drain" && move.type === "water") return zeroResult(d);
-  if (d.ability === "volt-absorb" && move.type === "electric") return zeroResult(d);
-  if (d.ability === "lightning-rod" && move.type === "electric") return zeroResult(d);
-  if (d.ability === "motor-drive" && move.type === "electric") return zeroResult(d);
-  if (d.ability === "flash-fire" && move.type === "fire") return zeroResult(d);
-  if (d.ability === "well-baked-body" && move.type === "fire") return zeroResult(d);
-  if (d.ability === "sap-sipper" && move.type === "grass") return zeroResult(d);
-  if (d.ability === "levitate" && move.type === "ground") return zeroResult(d);
-  if (d.ability === "earth-eater" && move.type === "ground") return zeroResult(d);
-  if (d.ability === "dry-skin" && move.type === "water") return zeroResult(d);
+  if (dAbility === "water-absorb" && move.type === "water") return zeroResult(d);
+  if (dAbility === "storm-drain" && move.type === "water") return zeroResult(d);
+  if (dAbility === "volt-absorb" && move.type === "electric") return zeroResult(d);
+  if (dAbility === "lightning-rod" && move.type === "electric") return zeroResult(d);
+  if (dAbility === "motor-drive" && move.type === "electric") return zeroResult(d);
+  if (dAbility === "flash-fire" && move.type === "fire") return zeroResult(d);
+  if (dAbility === "well-baked-body" && move.type === "fire") return zeroResult(d);
+  if (dAbility === "sap-sipper" && move.type === "grass") return zeroResult(d);
+  if (dAbility === "levitate" && move.type === "ground") return zeroResult(d);
+  if (dAbility === "earth-eater" && move.type === "ground") return zeroResult(d);
+  if (dAbility === "dry-skin" && move.type === "water") return zeroResult(d);
 
   // ── Effective stats ──────────────────────────────────────────────────────
   // Most moves use Atk/Def (physical) or SpA/SpD (special), but a handful
@@ -840,7 +875,7 @@ export function calc(input: CalcInput): CalcOutput | null {
   }
 
   // Terrain (must be grounded for grounded-only effects)
-  const defenderGrounded = isGrounded(d.types, d.ability);
+  const defenderGrounded = isGrounded(d.types, dAbility);
   const attackerGrounded = isGrounded(a.types, a.ability);
   if (field.terrain === "electric" && attackerGrounded && moveType === "electric") {
     dmg = Math.floor(dmg * 1.3); notes.push("Electric Terrain ×1.3");
@@ -917,33 +952,33 @@ export function calc(input: CalcInput): CalcOutput | null {
     dmg = Math.floor(dmg * 1.2); notes.push("Reckless ×1.2");
   }
 
-  // Defender ability damping
-  if (d.ability === "punk-rock" && isSound(move.slug)) {
+  // Defender ability damping (bypassed entirely under Mold Breaker via dAbility)
+  if (dAbility === "punk-rock" && isSound(move.slug)) {
     dmg = Math.floor(dmg * 0.5); notes.push("Punk Rock def ×0.5");
   }
-  if (d.ability === "ice-scales" && !isPhysical) {
+  if (dAbility === "ice-scales" && !isPhysical) {
     dmg = Math.floor(dmg * 0.5); notes.push("Ice Scales ×0.5");
   }
-  if (d.ability === "fluffy") {
+  if (dAbility === "fluffy") {
     if (isContact(move.slug)) { dmg = Math.floor(dmg * 0.5); notes.push("Fluffy contact ×0.5"); }
     if (moveType === "fire")  { dmg = Math.floor(dmg * 2);   notes.push("Fluffy fire ×2"); }
   }
-  if (d.ability === "heatproof" && moveType === "fire") {
+  if (dAbility === "heatproof" && moveType === "fire") {
     dmg = Math.floor(dmg * 0.5); notes.push("Heatproof ×0.5");
   }
-  if (d.ability === "water-bubble" && moveType === "fire") {
+  if (dAbility === "water-bubble" && moveType === "fire") {
     dmg = Math.floor(dmg * 0.5); notes.push("Water Bubble ×0.5");
   }
-  if (d.ability === "thick-fat" && (moveType === "fire" || moveType === "ice")) {
+  if (dAbility === "thick-fat" && (moveType === "fire" || moveType === "ice")) {
     dmg = Math.floor(dmg * 0.5); notes.push("Thick Fat ×0.5");
   }
-  if (d.ability === "purifying-salt" && moveType === "ghost") {
+  if (dAbility === "purifying-salt" && moveType === "ghost") {
     dmg = Math.floor(dmg * 0.5); notes.push("Purifying Salt ×0.5");
   }
-  if (d.ability === "dry-skin" && moveType === "fire") {
+  if (dAbility === "dry-skin" && moveType === "fire") {
     dmg = Math.floor(dmg * 1.25); notes.push("Dry Skin ×1.25");
   }
-  if (d.ability === "multiscale" && d.hpPct >= 99.5) {
+  if (dAbility === "multiscale" && d.hpPct >= 99.5) {
     dmg = Math.floor(dmg * 0.5); notes.push("Multiscale ×0.5");
   }
 
@@ -991,12 +1026,12 @@ export function calc(input: CalcInput): CalcOutput | null {
   let eff = effectivenessAgainst(moveType, defTypes);
 
   // Wonder Guard: only super-effective hits land.
-  if (d.ability === "wonder-guard" && eff <= 1) return zeroResult(d, notes.concat("Wonder Guard"));
+  if (dAbility === "wonder-guard" && eff <= 1) return zeroResult(d, notes.concat("Wonder Guard"));
 
   // Filter / Solid Rock / Prism Armor: SE hits ×0.75
-  if (eff > 1 && (d.ability === "filter" || d.ability === "solid-rock" || d.ability === "prism-armor")) {
+  if (eff > 1 && (dAbility === "filter" || dAbility === "solid-rock" || dAbility === "prism-armor")) {
     eff *= 0.75;
-    notes.push(`${d.ability} ×0.75 SE`);
+    notes.push(`${dAbility} ×0.75 SE`);
   }
   // Tinted Lens: NVE hits ×2
   if (eff > 0 && eff < 1 && a.ability === "tinted-lens") {

@@ -64,6 +64,7 @@ export default async function PokemonBuilderPage({
       abilities: JSON.parse(p.abilities) as string[],
       hiddenAbility: p.hiddenAbility,
       hp: p.hp, atk: p.atk, def: p.def, spa: p.spa, spd: p.spd, spe: p.spe,
+      weight: p.weight,
       learnableMoves: JSON.parse(p.learnableMoves) as string[],
       usagePct: p.usagePct,
       usageByFormat,

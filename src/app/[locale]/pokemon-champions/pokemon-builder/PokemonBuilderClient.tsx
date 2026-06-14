@@ -10,6 +10,7 @@ import type { PokemonType } from "@/lib/types";
 import {
   calc,
   computeStat,
+  isVariablePowerMove,
   NATURES,
   natureEffect,
   type Nature,
@@ -39,6 +40,8 @@ export type BuilderRefPokemon = {
   abilities: string[];
   hiddenAbility: string | null;
   hp: number; atk: number; def: number; spa: number; spd: number; spe: number;
+  /** Body weight in hectograms (PokeAPI native). Needed for Heavy Slam / Low Kick / … */
+  weight: number;
   learnableMoves: string[];
   usagePct: number;
   usage: PokemonUsage | null;
@@ -1091,7 +1094,7 @@ function OffenseMatrixCard({
   const myDamagingMoves = useMemo(() => {
     return build.moves
       .map((s) => moveBySlug.get(s))
-      .filter((m): m is BuilderRefMove => !!m && m.category !== "status" && (m.power ?? 0) > 0);
+      .filter((m): m is BuilderRefMove => !!m && m.category !== "status" && ((m.power ?? 0) > 0 || isVariablePowerMove(m.slug)));
   }, [build.moves, moveBySlug]);
 
   return (
@@ -1173,7 +1176,7 @@ function DefenseMatrixCard({
   const myDamagingMoves = useMemo(
     () => build.moves
       .map((s) => moveBySlug.get(s))
-      .filter((m): m is BuilderRefMove => !!m && m.category !== "status" && (m.power ?? 0) > 0),
+      .filter((m): m is BuilderRefMove => !!m && m.category !== "status" && ((m.power ?? 0) > 0 || isVariablePowerMove(m.slug))),
     [build.moves, moveBySlug],
   );
   const mySpeed = useMemo(() => speedFromBuild(p, build), [p, build]);
@@ -1185,7 +1188,7 @@ function DefenseMatrixCard({
       const damaging = (tp.usage?.topMoves ?? [])
         .filter((m) => learnable.has(m.slug))
         .map((m) => moveBySlug.get(m.slug))
-        .filter((m): m is BuilderRefMove => !!m && m.category !== "status" && (m.power ?? 0) > 0)
+        .filter((m): m is BuilderRefMove => !!m && m.category !== "status" && ((m.power ?? 0) > 0 || isVariablePowerMove(m.slug)))
         .slice(0, 4);
       return { p: tp, moves: damaging };
     });
@@ -1850,34 +1853,57 @@ function runCalc(
   defenderBuild: Build,
   move: BuilderRefMove,
 ): { minPct: number; maxPct: number; ohkoPct: number; twoHkoPct: number } | null {
-  if (move.category === "status" || (move.power ?? 0) <= 0) return null;
+  // Keep variable-BP moves (Heavy Slam, Low Kick, Gyro Ball, …): PokeAPI ships
+  // them with null power, but calc() resolves BP from weight/speed/HP state.
+  if (move.category === "status") return null;
+  if ((move.power ?? 0) <= 0 && !isVariablePowerMove(move.slug)) return null;
   const input: CalcInput = {
     attacker: {
+      slug: attacker.slug,
       types: [attacker.type1 as PokemonType, (attacker.type2 ?? null) as PokemonType | null],
       atk: attacker.atk,
       spa: attacker.spa,
+      def: attacker.def,
+      spd: attacker.spd,
+      spe: attacker.spe,
+      weight: attacker.weight,
       vpAtk: attackerBuild.ev[1],
       vpSpa: attackerBuild.ev[3],
+      vpDef: attackerBuild.ev[2],
+      vpSpd: attackerBuild.ev[4],
+      vpSpe: attackerBuild.ev[5],
       nature: attackerBuild.nature,
       ability: attackerBuild.ability || undefined,
       item: attackerBuild.item || undefined,
       status: "none",
       stageAtk: attackerBuild.stages.atk,
       stageSpa: attackerBuild.stages.spa,
+      stageDef: attackerBuild.stages.def,
+      stageSpd: attackerBuild.stages.spd,
     },
     defender: {
+      slug: defender.slug,
       types: [defender.type1 as PokemonType, (defender.type2 ?? null) as PokemonType | null],
       hp: defender.hp,
       def: defender.def,
       spd: defender.spd,
+      atk: defender.atk,
+      spa: defender.spa,
+      spe: defender.spe,
+      weight: defender.weight,
       vpHp: defenderBuild.ev[0],
       vpDef: defenderBuild.ev[2],
       vpSpd: defenderBuild.ev[4],
+      vpAtk: defenderBuild.ev[1],
+      vpSpa: defenderBuild.ev[3],
+      vpSpe: defenderBuild.ev[5],
       nature: defenderBuild.nature,
       ability: defenderBuild.ability || undefined,
       item: defenderBuild.item || undefined,
       stageDef: defenderBuild.stages.def,
       stageSpd: defenderBuild.stages.spd,
+      stageAtk: defenderBuild.stages.atk,
+      stageSpa: defenderBuild.stages.spa,
       hpPct: 100,
     },
     move: {
