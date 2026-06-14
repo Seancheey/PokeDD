@@ -103,7 +103,13 @@ export default async function PokemonDetailPage({
         {t("back")}
       </Link>
 
-      <header className="mt-3 flex flex-col items-start gap-6 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center">
+      <header className="relative mt-3 flex flex-col items-start gap-6 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center">
+        <Link
+          href={`/pokemon-champions/pokemon-builder?mon=${p.slug}`}
+          className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+        >
+          {t("buildThis")}
+        </Link>
         <Image
           src={p.spriteUrl}
           alt={p.name}
@@ -164,12 +170,6 @@ export default async function PokemonDetailPage({
               {bst}
             </span>
           </div>
-          <Link
-            href={`/pokemon-champions/pokemon-builder?mon=${p.slug}`}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-          >
-            {t("buildThis")}
-          </Link>
         </div>
       </header>
 
