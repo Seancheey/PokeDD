@@ -87,6 +87,7 @@ export default async function ItemsListPage({
                 <td className="px-3 py-2 whitespace-nowrap">
                   <Link
                     href={`/pokemon-champions/items/${it.slug}`}
+                    prefetch={false}
                     className="font-semibold text-zinc-950 hover:text-red-600 dark:text-zinc-50"
                   >
                     {localizedItemName(it, locale as Locale)}

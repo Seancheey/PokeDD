@@ -38,7 +38,7 @@ export function ItemsCategoryFilter({ selected }: { selected: string | null }) {
       <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         {t("categoryLabel")}
       </span>
-      <Link href={withCat(null)} scroll={false} className={cn(chip, !selected ? on : off)}>
+      <Link href={withCat(null)} scroll={false} prefetch={false} className={cn(chip, !selected ? on : off)}>
         {t("categoryAll")}
       </Link>
       {CATEGORIES.map((c) => (
@@ -46,6 +46,7 @@ export function ItemsCategoryFilter({ selected }: { selected: string | null }) {
           key={c.slug}
           href={withCat(selected === c.slug ? null : c.slug)}
           scroll={false}
+          prefetch={false}
           className={cn(chip, selected === c.slug ? on : off)}
         >
           {t(c.labelKey)}
