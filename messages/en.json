@@ -244,7 +244,10 @@
     "formLabel": "Form",
     "formShield": "Shield",
     "formBlade": "Blade",
-    "bladeFormBadge": "Blade Form (attacking)"
+    "bladeFormBadge": "Blade Form (attacking)",
+    "movesFirst": "{who} moves first",
+    "speedTie": "Speed tie",
+    "turnOrderPriority": "priority {p}"
   },
   "TeamBuilder": {
     "title": "Team Builder",
@@ -265,7 +268,12 @@
     "evRemaining": "{remaining} EV remaining",
     "evOver": "Over by {over} EV",
     "evStat": {
-      "hp": "HP", "atk": "Atk", "def": "Def", "spa": "SpA", "spd": "SpD", "spe": "Spe"
+      "hp": "HP",
+      "atk": "Atk",
+      "def": "Def",
+      "spa": "SpA",
+      "spd": "SpD",
+      "spe": "Spe"
     },
     "share": "Share",
     "copyLink": "Copy link",
@@ -422,20 +430,40 @@
     }
   },
   "Natures": {
-    "Hardy": "Hardy", "Lonely": "Lonely", "Adamant": "Adamant",
-    "Naughty": "Naughty", "Brave": "Brave",
-    "Bold": "Bold", "Docile": "Docile", "Impish": "Impish",
-    "Lax": "Lax", "Relaxed": "Relaxed",
-    "Modest": "Modest", "Mild": "Mild", "Bashful": "Bashful",
-    "Rash": "Rash", "Quiet": "Quiet",
-    "Calm": "Calm", "Gentle": "Gentle", "Careful": "Careful",
-    "Sassy": "Sassy", "Quirky": "Quirky",
-    "Timid": "Timid", "Hasty": "Hasty", "Jolly": "Jolly",
-    "Naive": "Naive", "Serious": "Serious",
+    "Hardy": "Hardy",
+    "Lonely": "Lonely",
+    "Adamant": "Adamant",
+    "Naughty": "Naughty",
+    "Brave": "Brave",
+    "Bold": "Bold",
+    "Docile": "Docile",
+    "Impish": "Impish",
+    "Lax": "Lax",
+    "Relaxed": "Relaxed",
+    "Modest": "Modest",
+    "Mild": "Mild",
+    "Bashful": "Bashful",
+    "Rash": "Rash",
+    "Quiet": "Quiet",
+    "Calm": "Calm",
+    "Gentle": "Gentle",
+    "Careful": "Careful",
+    "Sassy": "Sassy",
+    "Quirky": "Quirky",
+    "Timid": "Timid",
+    "Hasty": "Hasty",
+    "Jolly": "Jolly",
+    "Naive": "Naive",
+    "Serious": "Serious",
     "neutralSuffix": "(neutral)"
   },
   "StatShort": {
-    "hp": "HP", "atk": "Atk", "def": "Def", "spa": "SpA", "spd": "SpD", "spe": "Spe"
+    "hp": "HP",
+    "atk": "Atk",
+    "def": "Def",
+    "spa": "SpA",
+    "spd": "SpD",
+    "spe": "Spe"
   },
   "Types": {
     "normal": "Normal",

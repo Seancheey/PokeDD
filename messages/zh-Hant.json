@@ -244,7 +244,10 @@
     "formLabel": "形態",
     "formShield": "盾牌",
     "formBlade": "刀劍",
-    "bladeFormBadge": "刀劍形態（攻擊時）"
+    "bladeFormBadge": "刀劍形態（攻擊時）",
+    "movesFirst": "{who}先手",
+    "speedTie": "速度相同",
+    "turnOrderPriority": "優先度 {p}"
   },
   "TeamBuilder": {
     "title": "隊伍構築",
@@ -265,7 +268,12 @@
     "evRemaining": "剩餘 {remaining} EV",
     "evOver": "超出 {over} EV",
     "evStat": {
-      "hp": "HP", "atk": "攻擊", "def": "防禦", "spa": "特攻", "spd": "特防", "spe": "速度"
+      "hp": "HP",
+      "atk": "攻擊",
+      "def": "防禦",
+      "spa": "特攻",
+      "spd": "特防",
+      "spe": "速度"
     },
     "share": "分享",
     "copyLink": "複製連結",
@@ -422,20 +430,40 @@
     }
   },
   "Natures": {
-    "Hardy": "勤奮", "Lonely": "怕寂寞", "Adamant": "固執",
-    "Naughty": "頑皮", "Brave": "勇敢",
-    "Bold": "大膽", "Docile": "坦率", "Impish": "淘氣",
-    "Lax": "樂天", "Relaxed": "悠閒",
-    "Modest": "內斂", "Mild": "慢吞吞", "Bashful": "害羞",
-    "Rash": "馬虎", "Quiet": "冷靜",
-    "Calm": "溫和", "Gentle": "溫順", "Careful": "慎重",
-    "Sassy": "自大", "Quirky": "浮躁",
-    "Timid": "膽小", "Hasty": "急躁", "Jolly": "爽朗",
-    "Naive": "天真", "Serious": "認真",
+    "Hardy": "勤奮",
+    "Lonely": "怕寂寞",
+    "Adamant": "固執",
+    "Naughty": "頑皮",
+    "Brave": "勇敢",
+    "Bold": "大膽",
+    "Docile": "坦率",
+    "Impish": "淘氣",
+    "Lax": "樂天",
+    "Relaxed": "悠閒",
+    "Modest": "內斂",
+    "Mild": "慢吞吞",
+    "Bashful": "害羞",
+    "Rash": "馬虎",
+    "Quiet": "冷靜",
+    "Calm": "溫和",
+    "Gentle": "溫順",
+    "Careful": "慎重",
+    "Sassy": "自大",
+    "Quirky": "浮躁",
+    "Timid": "膽小",
+    "Hasty": "急躁",
+    "Jolly": "爽朗",
+    "Naive": "天真",
+    "Serious": "認真",
     "neutralSuffix": "(無變化)"
   },
   "StatShort": {
-    "hp": "HP", "atk": "攻擊", "def": "防禦", "spa": "特攻", "spd": "特防", "spe": "速度"
+    "hp": "HP",
+    "atk": "攻擊",
+    "def": "防禦",
+    "spa": "特攻",
+    "spd": "特防",
+    "spe": "速度"
   },
   "Types": {
     "normal": "一般",

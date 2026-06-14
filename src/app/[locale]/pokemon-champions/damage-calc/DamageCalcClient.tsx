@@ -9,6 +9,8 @@ import { Combobox, type ComboboxOption } from "@/components/Combobox";
 import type { PokemonType } from "@/lib/types";
 import {
   calc,
+  computeStat,
+  stageFactor,
   NATURES,
   natureEffect,
   type Weather,
@@ -75,6 +77,7 @@ type SideState = {
   stageDef: number;
   stageSpa: number;
   stageSpd: number;
+  stageSpe: number;
 };
 
 function defaultSide(p: CalcRefPokemon | undefined, attacking: boolean): SideState {
@@ -95,7 +98,7 @@ function defaultSide(p: CalcRefPokemon | undefined, attacking: boolean): SideSta
     status: "none",
     hpPct: 100,
     vp,
-    stageAtk: 0, stageDef: 0, stageSpa: 0, stageSpd: 0,
+    stageAtk: 0, stageDef: 0, stageSpa: 0, stageSpd: 0, stageSpe: 0,
   };
 }
 
@@ -206,7 +209,7 @@ export function DamageCalcClient({
       status: "none",
       hpPct: 100,
       vp: [...mon.ev] as [number, number, number, number, number, number],
-      stageAtk: 0, stageDef: 0, stageSpa: 0, stageSpd: 0,
+      stageAtk: 0, stageDef: 0, stageSpa: 0, stageSpd: 0, stageSpe: 0,
     };
     if (side === "attacker") {
       setAtk(next);
@@ -298,6 +301,35 @@ export function DamageCalcClient({
     weather, terrain, format, crit, helpingHand,
     reflect, lightScreen, auroraVeil, stealthRock, spikes,
   ]);
+
+  // Turn order: compare the attacker's move priority against the defender (whose
+  // move is unknown, so assumed priority 0). Equal priority falls back to
+  // effective Speed. Paralysis halves Speed; Choice Scarf adds ×1.5.
+  const turnOrder = useMemo(() => {
+    if (!attackerStatsMon || !defenderStatsMon || !move) return null;
+    const speed = (m: CalcRefPokemon, s: SideState): number => {
+      let spe = computeStat(m.spe, s.vp[5], s.nature, "spe");
+      spe = Math.floor(spe * stageFactor(s.stageSpe));
+      if (s.status === "paralysis") spe = Math.floor(spe * 0.5);
+      if (s.item === "choice-scarf") spe = Math.floor(spe * 1.5);
+      return spe;
+    };
+    const aSpe = speed(attackerStatsMon, atk);
+    const dSpe = speed(defenderStatsMon, def);
+    const aPrio = move.priority;
+    const dPrio = 0;
+    let first: "attacker" | "defender" | "tie";
+    let byPriority = false;
+    if (aPrio !== dPrio) {
+      first = aPrio > dPrio ? "attacker" : "defender";
+      byPriority = true;
+    } else if (aSpe !== dSpe) {
+      first = aSpe > dSpe ? "attacker" : "defender";
+    } else {
+      first = "tie";
+    }
+    return { first, aSpe, dSpe, aPrio, byPriority };
+  }, [attackerStatsMon, defenderStatsMon, move, atk, def]);
 
   const speciesOptions: ComboboxOption[] = useMemo(
     () =>
@@ -392,6 +424,7 @@ export function DamageCalcClient({
           attackerSelected={Boolean(attackerMon)}
           canSwap={Boolean(attackerMon) && Boolean(defenderMon)}
           onSwap={swapSides}
+          turnOrder={turnOrder}
         />
         <FlowArrow />
         <SidePanel
@@ -464,6 +497,7 @@ function MoveCard({
   attackerSelected,
   canSwap,
   onSwap,
+  turnOrder,
 }: {
   moveSlug: string;
   setMoveSlug: (v: string) => void;
@@ -472,6 +506,13 @@ function MoveCard({
   attackerSelected: boolean;
   canSwap: boolean;
   onSwap: () => void;
+  turnOrder: {
+    first: "attacker" | "defender" | "tie";
+    aSpe: number;
+    dSpe: number;
+    aPrio: number;
+    byPriority: boolean;
+  } | null;
 }) {
   const t = useTranslations("DamageCalc");
   const tMoves = useTranslations("Moves");
@@ -535,6 +576,7 @@ function MoveCard({
               {move.effect}
             </p>
           ) : null}
+          {turnOrder ? <TurnOrderChip turnOrder={turnOrder} /> : null}
         </div>
       ) : (
         <p className="mt-3 text-xs italic text-zinc-400">
@@ -556,6 +598,55 @@ function MoveStat({
     <div className="flex items-center justify-between gap-2">
       <dt className="text-zinc-500">{label}</dt>
       <dd className="font-mono tabular-nums">{children}</dd>
+    </div>
+  );
+}
+
+// ─── Turn-order chip (who moves first) ───────────────────────────────────────
+
+function TurnOrderChip({
+  turnOrder,
+}: {
+  turnOrder: {
+    first: "attacker" | "defender" | "tie";
+    aSpe: number;
+    dSpe: number;
+    aPrio: number;
+    byPriority: boolean;
+  };
+}) {
+  const t = useTranslations("DamageCalc");
+  const { first, aSpe, dSpe, aPrio, byPriority } = turnOrder;
+
+  const label =
+    first === "tie"
+      ? t("speedTie")
+      : t("movesFirst", {
+          who: t(first === "attacker" ? "attacker" : "defender"),
+        });
+
+  // Detail: priority drove the decision → show it; otherwise the Speed pair.
+  const detail = byPriority
+    ? t("turnOrderPriority", { p: aPrio > 0 ? `+${aPrio}` : `${aPrio}` })
+    : `${t("attacker")} ${aSpe} · ${t("defender")} ${dSpe}`;
+
+  const tone =
+    first === "attacker"
+      ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"
+      : first === "defender"
+      ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300"
+      : "border-zinc-300 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300";
+
+  return (
+    <div
+      className={cn(
+        "inline-flex flex-wrap items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+        tone,
+      )}
+    >
+      <span aria-hidden>⚡</span>
+      <span className="font-semibold">{label}</span>
+      <span className="opacity-70">· {detail}</span>
     </div>
   );
 }
@@ -639,33 +730,43 @@ function SidePanel({
     label: t(`status${s.charAt(0).toUpperCase()}${s.slice(1)}` as `status${Capitalize<Status>}`),
   }));
 
-  function setStage(key: "stageAtk" | "stageDef" | "stageSpa" | "stageSpd", value: number) {
+  function setStage(
+    key: "stageAtk" | "stageDef" | "stageSpa" | "stageSpd" | "stageSpe",
+    value: number,
+  ) {
     setSide((s) => ({ ...s, [key]: Math.max(-6, Math.min(6, value)) }));
   }
 
   // Show stages relevant to the selected move. Body Press uses attacker Def,
   // so swap Atk for Def on the attacker. Foul Play uses defender's Atk, so add
   // it to the defender's defensive pair.
-  type StageKey = "stageAtk" | "stageDef" | "stageSpa" | "stageSpd";
+  type StageKey = "stageAtk" | "stageDef" | "stageSpa" | "stageSpd" | "stageSpe";
+  // Spe is always shown — it drives turn order even though it doesn't affect
+  // the damage roll.
+  const speRow = { key: "stageSpe" as StageKey, label: tStat("spe") };
   const stageRows: Array<{ key: StageKey; label: string }> = isAttacker
     ? moveSlug === "body-press"
       ? [
           { key: "stageDef", label: tStat("def") },
           { key: "stageSpa", label: tStat("spa") },
+          speRow,
         ]
       : [
           { key: "stageAtk", label: tStat("atk") },
           { key: "stageSpa", label: tStat("spa") },
+          speRow,
         ]
     : moveSlug === "foul-play"
       ? [
           { key: "stageAtk", label: tStat("atk") },
           { key: "stageDef", label: tStat("def") },
           { key: "stageSpd", label: tStat("spd") },
+          speRow,
         ]
       : [
           { key: "stageDef", label: tStat("def") },
           { key: "stageSpd", label: tStat("spd") },
+          speRow,
         ];
 
   return (
@@ -813,7 +914,7 @@ function SidePanel({
         <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
           {t("stageLabel")}
         </div>
-        <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
+        <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
           {stageRows.map((row) => (
             <div key={row.key} className="flex items-center justify-between rounded-md border border-zinc-300 px-2 py-0.5 dark:border-zinc-700">
               <button

@@ -96,7 +96,7 @@ export function computeStat(
 }
 
 /** Stat-stage multiplier per Gen 6+ rules. */
-function stageFactor(stage: number): number {
+export function stageFactor(stage: number): number {
   const s = Math.max(-6, Math.min(6, stage));
   if (s >= 0) return (2 + s) / 2;
   return 2 / (2 - s);

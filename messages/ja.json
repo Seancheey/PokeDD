@@ -244,7 +244,10 @@
     "formLabel": "フォルム",
     "formShield": "シールド",
     "formBlade": "ブレード",
-    "bladeFormBadge": "ブレードフォルム（攻撃時）"
+    "bladeFormBadge": "ブレードフォルム（攻撃時）",
+    "movesFirst": "{who}が先に行動",
+    "speedTie": "同速",
+    "turnOrderPriority": "優先度 {p}"
   },
   "TeamBuilder": {
     "title": "チーム作成",
@@ -265,7 +268,12 @@
     "evRemaining": "残り {remaining} EV",
     "evOver": "{over} EV オーバー",
     "evStat": {
-      "hp": "HP", "atk": "こうげき", "def": "ぼうぎょ", "spa": "とくこう", "spd": "とくぼう", "spe": "すばやさ"
+      "hp": "HP",
+      "atk": "こうげき",
+      "def": "ぼうぎょ",
+      "spa": "とくこう",
+      "spd": "とくぼう",
+      "spe": "すばやさ"
     },
     "share": "共有",
     "copyLink": "リンクをコピー",
@@ -422,20 +430,40 @@
     }
   },
   "Natures": {
-    "Hardy": "がんばりや", "Lonely": "さみしがり", "Adamant": "いじっぱり",
-    "Naughty": "やんちゃ", "Brave": "ゆうかん",
-    "Bold": "ずぶとい", "Docile": "すなお", "Impish": "わんぱく",
-    "Lax": "のうてんき", "Relaxed": "のんき",
-    "Modest": "ひかえめ", "Mild": "おっとり", "Bashful": "てれや",
-    "Rash": "うっかりや", "Quiet": "れいせい",
-    "Calm": "おだやか", "Gentle": "おとなしい", "Careful": "しんちょう",
-    "Sassy": "なまいき", "Quirky": "きまぐれ",
-    "Timid": "おくびょう", "Hasty": "せっかち", "Jolly": "ようき",
-    "Naive": "むじゃき", "Serious": "まじめ",
+    "Hardy": "がんばりや",
+    "Lonely": "さみしがり",
+    "Adamant": "いじっぱり",
+    "Naughty": "やんちゃ",
+    "Brave": "ゆうかん",
+    "Bold": "ずぶとい",
+    "Docile": "すなお",
+    "Impish": "わんぱく",
+    "Lax": "のうてんき",
+    "Relaxed": "のんき",
+    "Modest": "ひかえめ",
+    "Mild": "おっとり",
+    "Bashful": "てれや",
+    "Rash": "うっかりや",
+    "Quiet": "れいせい",
+    "Calm": "おだやか",
+    "Gentle": "おとなしい",
+    "Careful": "しんちょう",
+    "Sassy": "なまいき",
+    "Quirky": "きまぐれ",
+    "Timid": "おくびょう",
+    "Hasty": "せっかち",
+    "Jolly": "ようき",
+    "Naive": "むじゃき",
+    "Serious": "まじめ",
     "neutralSuffix": "(変化なし)"
   },
   "StatShort": {
-    "hp": "HP", "atk": "攻撃", "def": "防御", "spa": "特攻", "spd": "特防", "spe": "素早さ"
+    "hp": "HP",
+    "atk": "攻撃",
+    "def": "防御",
+    "spa": "特攻",
+    "spd": "特防",
+    "spe": "素早さ"
   },
   "Types": {
     "normal": "ノーマル",
