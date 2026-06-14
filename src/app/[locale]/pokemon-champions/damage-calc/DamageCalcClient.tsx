@@ -50,6 +50,12 @@ export type CalcRefMove = {
   category: string; // "physical" | "special" | "status"
   // NULL = variable-BP move (Heavy Slam, Low Kick, …); resolved at calc time.
   power: number | null;
+  accuracy: number | null; // NULL = never-misses move
+  pp: number;
+  priority: number;
+  makesContact: boolean;
+  effectChance: number | null;
+  effect: string; // localized short effect description
   targetShape: string;
 };
 export type CalcRefAbility = { slug: string; name: string };
@@ -468,6 +474,7 @@ function MoveCard({
   onSwap: () => void;
 }) {
   const t = useTranslations("DamageCalc");
+  const tMoves = useTranslations("Moves");
   return (
     <article className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-center justify-between gap-2">
@@ -498,17 +505,36 @@ function MoveCard({
         />
       </div>
       {move ? (
-        <div className="mt-3 space-y-2 text-sm">
+        <div className="mt-3 space-y-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <TypeChip type={move.type as PokemonType} size="sm" />
             <CategoryBadge cat={move.category} />
           </div>
-          <dl className="grid grid-cols-2 gap-1 text-xs">
-            <dt className="text-zinc-500">{t("powerLabel")}</dt>
-            <dd className="text-right font-mono tabular-nums">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+            <MoveStat label={t("powerLabel")}>
               {move.power && move.power > 0 ? move.power : "—"}
-            </dd>
+            </MoveStat>
+            <MoveStat label={tMoves("columns.accuracy")}>
+              {move.accuracy ?? "—"}
+            </MoveStat>
+            <MoveStat label={tMoves("columns.pp")}>{move.pp}</MoveStat>
+            <MoveStat label={tMoves("columns.priority")}>
+              {move.priority > 0 ? `+${move.priority}` : move.priority}
+            </MoveStat>
+            <MoveStat label={tMoves("detail.contact")}>
+              {tMoves(move.makesContact ? "detail.yes" : "detail.no")}
+            </MoveStat>
+            {move.effectChance ? (
+              <MoveStat label={t("effectChanceLabel")}>
+                {move.effectChance}%
+              </MoveStat>
+            ) : null}
           </dl>
+          {move.effect ? (
+            <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+              {move.effect}
+            </p>
+          ) : null}
         </div>
       ) : (
         <p className="mt-3 text-xs italic text-zinc-400">
@@ -516,6 +542,21 @@ function MoveCard({
         </p>
       )}
     </article>
+  );
+}
+
+function MoveStat({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <dt className="text-zinc-500">{label}</dt>
+      <dd className="font-mono tabular-nums">{children}</dd>
+    </div>
   );
 }
 

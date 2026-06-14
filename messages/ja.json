@@ -231,6 +231,7 @@
     "pickDefenderHint": "防御側のポケモンを選んでください。",
     "noMoveSelected": "攻撃技を選んでください。",
     "powerLabel": "威力",
+    "effectChanceLabel": "追加効果",
     "pctOfDefender": "{defender} へのダメージ:{attacker} の {move} で {min}〜{max} HP。",
     "koGuaranteed": "確定KO",
     "koChance": "{pct}% でKO",

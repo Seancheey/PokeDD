@@ -4,6 +4,7 @@ import type { Locale } from "@/i18n/routing";
 import {
   localizedPokemonName,
   localizedMoveName,
+  localizedMoveEffect,
   localizedAbilityName,
   localizedItemName,
 } from "@/lib/i18n-pokemon";
@@ -71,6 +72,12 @@ export default async function DamageCalcPage({
     category: m.category,
     // NULL in DB ⇒ variable-BP move; resolved at calc time from species state.
     power: m.power ?? null,
+    accuracy: m.accuracy ?? null,
+    pp: m.pp,
+    priority: m.priority,
+    makesContact: m.makesContact,
+    effectChance: m.effectChance ?? null,
+    effect: localizedMoveEffect(m, loc),
     targetShape: m.targetShape,
   }));
   const refAbilities: CalcRefAbility[] = abilities.map((a) => ({

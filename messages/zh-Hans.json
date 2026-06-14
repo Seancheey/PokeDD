@@ -231,6 +231,7 @@
     "pickDefenderHint": "选择一只宝可梦作为防御方。",
     "noMoveSelected": "选择一个攻击招式。",
     "powerLabel": "威力",
+    "effectChanceLabel": "追加效果几率",
     "pctOfDefender": "对 {defender} 造成的伤害:{attacker} 的 {move} 打出 {min}–{max} HP。",
     "koGuaranteed": "确定击倒",
     "koChance": "{pct}% 几率击倒",

@@ -231,6 +231,7 @@
     "pickDefenderHint": "Pick a Pokémon to face.",
     "noMoveSelected": "Pick a damage move.",
     "powerLabel": "Base power",
+    "effectChanceLabel": "Effect chance",
     "pctOfDefender": "Damage to {defender}: {min}–{max} HP from {attacker}'s {move}.",
     "koGuaranteed": "Guaranteed KO",
     "koChance": "{pct}% chance to KO",
