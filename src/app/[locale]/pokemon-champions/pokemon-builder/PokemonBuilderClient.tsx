@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Fragment, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { TypeChip } from "@/components/TypeChip";
 import { Combobox, type ComboboxOption } from "@/components/Combobox";
@@ -187,6 +188,15 @@ export function PokemonBuilderClient({
       });
     });
   }, [pokemonBySlug]);
+
+  // Preselect a species from the `?mon=<slug>` query param (the "Build this
+  // Pokémon" CTA on the species detail page links here). Runs once on mount.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const slug = searchParams.get("mon");
+    if (slug && pokemonBySlug.has(slug)) selectPokemon(slug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Targets: default most-used set (unless cleared) + custom additions
   // (deduped, custom appended in order), minus any individually-removed rows.

@@ -164,6 +164,12 @@ export default async function PokemonDetailPage({
               {bst}
             </span>
           </div>
+          <Link
+            href={`/pokemon-champions/pokemon-builder?mon=${p.slug}`}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+          >
+            {t("buildThis")}
+          </Link>
         </div>
       </header>
 
