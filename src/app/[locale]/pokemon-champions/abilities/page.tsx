@@ -75,6 +75,7 @@ export default async function AbilitiesListPage({
                 <td className="px-3 py-2 whitespace-nowrap">
                   <Link
                     href={`/pokemon-champions/abilities/${a.slug}`}
+                    prefetch={false}
                     className="font-semibold text-zinc-950 hover:text-red-600 dark:text-zinc-50"
                   >
                     {localizedAbilityName(a, locale as Locale)}

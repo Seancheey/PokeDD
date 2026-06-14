@@ -35,6 +35,7 @@ export function MovesFilters({
       <Link
         href={withParams((n) => n.delete("cat"))}
         scroll={false}
+        prefetch={false}
         className={cn(
           "rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
           !category
@@ -51,6 +52,7 @@ export function MovesFilters({
             key={c}
             href={withParams((n) => (active ? n.delete("cat") : n.set("cat", c)))}
             scroll={false}
+            prefetch={false}
             className={cn(
               "rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
               active
@@ -85,6 +87,7 @@ export function MovesFilters({
             key={tp}
             href={href}
             scroll={false}
+            prefetch={false}
             className={cn(
               "rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
               isOn

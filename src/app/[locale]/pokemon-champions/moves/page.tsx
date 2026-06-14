@@ -110,6 +110,7 @@ export default async function MovesListPage({
                 <td className="px-3 py-2">
                   <Link
                     href={`/pokemon-champions/moves/${m.slug}`}
+                    prefetch={false}
                     className="font-semibold text-zinc-950 hover:text-red-600 dark:text-zinc-50"
                   >
                     {localizedMoveName(m, locale as Locale)}

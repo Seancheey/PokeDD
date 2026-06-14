@@ -34,6 +34,7 @@ export function MovesSortHeader({
     <th className={cn("px-3 py-2", align === "left" ? "text-left" : "text-right")}>
       <Link
         scroll={false}
+        prefetch={false}
         href={`/pokemon-champions/moves?${next.toString()}`}
         className={cn(
           "inline-flex items-center gap-1 font-semibold transition-colors",
