@@ -36,6 +36,7 @@ export function SortHeader({
     <th className={cn("px-3 py-2", align === "left" ? "text-left" : "text-right")}>
       <Link
         scroll={false}
+        prefetch={false}
         href={`/pokemon-champions/pokemon?${next.toString()}`}
         className={cn(
           "inline-flex items-center gap-1 font-semibold transition-colors",

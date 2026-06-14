@@ -35,6 +35,7 @@ export function TypeFilters({ selected }: { selected: PokemonType[] }) {
             key={tp}
             href={q ? `/pokemon-champions/pokemon?${q}` : "/pokemon-champions/pokemon"}
             scroll={false}
+            prefetch={false}
             className={cn(
               "rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all",
               isOn
