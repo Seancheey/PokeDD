@@ -7,6 +7,7 @@ export const proxy = createMiddleware(routing);
 export default proxy;
 
 export const config = {
-  // Match all routes except API, _next, _vercel internals, and static files.
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  // Match all routes except API, the /l/ short-link redirector, _next, _vercel
+  // internals, and static files.
+  matcher: ["/((?!api|l/|_next|_vercel|.*\\..*).*)"],
 };

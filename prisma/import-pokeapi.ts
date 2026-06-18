@@ -213,12 +213,23 @@ function forceI18n(
 // In each list we prefer the all-ladder (0) dump for the broadest roster /
 // move / item coverage and fall back to higher cutoffs if the broader file
 // isn't on disk yet.
+// Newest regulation first: once Smogon publishes the Regulation M-B chaos dump
+// (≈2026-07-01) and `refresh-data.sh` lands the `regmb` files, the importer
+// picks them up automatically and the hand-tagged M-B roster overlay below
+// becomes redundant (but stays harmless). Until then these regmb files are
+// absent and the importer falls through to the latest regma dump.
 const SMOGON_FILES_DOUBLES = [
+  "smogon-championsvgc2026regmb-0.json",
+  "smogon-championsvgc2026regmb-1500.json",
+  "smogon-championsvgc2026regmb-1760.json",
   "smogon-championsvgc2026regma-0.json",
   "smogon-championsvgc2026regma-1500.json",
   "smogon-championsvgc2026regma-1760.json",
 ];
 const SMOGON_FILES_SINGLES = [
+  "smogon-championsbssregmb-0.json",
+  "smogon-championsbssregmb-1500.json",
+  "smogon-championsbssregmb-1760.json",
   "smogon-championsbssregma-0.json",
   "smogon-championsbssregma-1500.json",
   "smogon-championsbssregma-1760.json",
@@ -393,6 +404,47 @@ const COMPETITIVE_OVERLAY: Array<{ slug: string; rank: number; usagePct: number 
   { slug: "charizard",  rank: 18, usagePct:  8.50 },
   { slug: "blastoise",  rank: 19, usagePct:  6.20 },
   { slug: "venusaur",   rank: 20, usagePct:  5.80 },
+];
+
+// ─── Regulation M-B roster overlay ───────────────────────────────────────────
+// Regulation Set M-B launched 2026-06-16. Smogon publishes its first M-B chaos
+// dump around 2026-07-01, so until then there is NO usage data to drive the
+// Champions roster tag for the newly-legal Pokémon. Tag them explicitly here so
+// they surface in Champions list views / the team builder immediately (with 0%
+// usage until the July import overlays real numbers). All M-A-legal Pokémon
+// remain legal in M-B and are already tagged via Smogon usage, so this set only
+// needs the *additions*: 22 new base species + their 14 Mega Evolutions.
+// Source: pokemon.com Regulation Set M-B announcement.
+const CHAMPIONS_MB_POKEMON = new Set<string>([
+  // 22 newly-legal base species (pyroar's default form slug is "pyroar-male")
+  "vileplume", "qwilfish", "sceptile", "blaziken", "swampert", "mawile",
+  "metagross", "staraptor", "musharna", "scolipede", "scrafty", "eelektross",
+  "pyroar-male", "malamar", "barbaracle", "dragalge", "grimmsnarl", "falinks",
+  "overqwil", "houndstone", "annihilape", "gholdengo",
+  // 16 newly-legal Mega Evolutions (5 canonical + 11 Champions-original, all
+  // already curated into the PokeAPI CSVs with stats/types/learnsets/names).
+  // Raichu itself was already legal in M-A; only its two new Megas are added.
+  "sceptile-mega", "blaziken-mega", "swampert-mega", "mawile-mega",
+  "metagross-mega", "staraptor-mega", "scolipede-mega", "scrafty-mega",
+  "eelektross-mega", "pyroar-mega", "malamar-mega", "barbaracle-mega",
+  "dragalge-mega", "falinks-mega", "raichu-mega-x", "raichu-mega-y",
+]);
+
+// Mega stones for the M-B megas that already exist in PokeAPI as real items —
+// tagged Champions-legal via gamesFor().
+const CHAMPIONS_MB_MEGA_STONES = new Set<string>([
+  "sceptilite", "blazikenite", "swampertite", "mawilite", "metagrossite",
+]);
+
+// Champions-original Mega stones for the M-B megas that DON'T exist in PokeAPI
+// and have no Smogon usage data yet. The importer injects them from the curated
+// ITEM_OVERRIDES entries (see prisma/item-overrides.ts). When the July Smogon
+// dump lands, the synthetic-item path reconciles their usage %.
+const CHAMPIONS_MB_NEW_STONES = [
+  "staraptorite", "scolipedite", "scraftite", "eelektrossite", "pyroarite",
+  "malamarite", "barbaraclite", "dragalgite", "falinksite",
+  // Raichu gets two Megas (X/Y), each with its own stone — mirrors Charizardite X/Y.
+  "raichunite-x", "raichunite-y",
 ];
 
 const TYPE_ID_TO_SLUG: Record<number, string> = {
@@ -866,12 +918,15 @@ async function main() {
       usagePct: overlay?.usagePct ?? 0,
       rank: overlay?.rank ?? null,
       regulations: JSON.stringify([]),
-      // Champions roster proxy: tag for "pokemon-champions" only if this
-      // Pokémon actually showed up in the Smogon Reg M-A dump (i.e. people
-      // play it competitively). Mons absent from the dump stay in the DB
-      // as catalog reference but are filtered out of list views.
+      // Champions roster proxy: tag for "pokemon-champions" if this Pokémon
+      // showed up in the Smogon dump (i.e. people play it competitively) OR it
+      // is a Regulation M-B addition not yet covered by Smogon usage data.
+      // Mons absent from both stay in the DB as catalog reference but are
+      // filtered out of list views.
       games: JSON.stringify(
-        rawCountBySlug.has(p.identifier) ? ["pokemon-champions"] : [],
+        rawCountBySlug.has(p.identifier) || CHAMPIONS_MB_POKEMON.has(p.identifier)
+          ? ["pokemon-champions"]
+          : [],
       ),
       learnableMoves: JSON.stringify(learnableMoves),
       usageStats: hasUsage ? JSON.stringify(usageStats) : "{}",
@@ -1059,7 +1114,9 @@ async function main() {
 
   const championsItemSlugs = new Set(globalItemUsagePct.keys());
   function gamesFor(slug: string): string[] {
-    return championsItemSlugs.has(slug) ? ["pokemon-champions"] : [];
+    return championsItemSlugs.has(slug) || CHAMPIONS_MB_MEGA_STONES.has(slug)
+      ? ["pokemon-champions"]
+      : [];
   }
 
   const itemRowsToInsert = itemMeta.map((it) => {
@@ -1094,6 +1151,30 @@ async function main() {
 
   for (const slug of syntheticItemNameBySlug.keys()) {
     if (!championsItemSlugs.has(slug)) continue;
+    const override = ITEM_OVERRIDES[slug];
+    const name = override?.name?.en ?? titleCaseFromSlug(slug);
+    const desc = override?.short?.en ?? "Allows a compatible Pokémon to Mega Evolve in Pokémon Champions.";
+    const nameI18n = mergeI18n(undefined, override?.name ?? { en: name });
+    const descI18n = mergeI18n(undefined, override?.short ?? { en: desc });
+    itemRowsToInsert.push({
+      slug,
+      name,
+      nameI18n: i18nJson(nameI18n),
+      category: "mega-stone",
+      description: desc,
+      descI18n: i18nJson(descI18n),
+      descLongI18n: i18nJson(mergeI18n(descI18n, override?.long)),
+      games: JSON.stringify(["pokemon-champions"]),
+      usagePct: globalItemUsagePct.get(slug) ?? 0,
+    });
+  }
+
+  // Inject the Regulation M-B Champions-original Mega stones (no PokeAPI row,
+  // no Smogon usage yet). Skip any that already landed via items.csv or the
+  // synthetic-item path above so the July Smogon refresh doesn't double-create.
+  const injectedItemSlugs = new Set(itemRowsToInsert.map((i) => i.slug));
+  for (const slug of CHAMPIONS_MB_NEW_STONES) {
+    if (injectedItemSlugs.has(slug)) continue;
     const override = ITEM_OVERRIDES[slug];
     const name = override?.name?.en ?? titleCaseFromSlug(slug);
     const desc = override?.short?.en ?? "Allows a compatible Pokémon to Mega Evolve in Pokémon Champions.";

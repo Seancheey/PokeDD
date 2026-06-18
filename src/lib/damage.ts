@@ -17,6 +17,8 @@
  *     we accept the resulting Atk stage), Adaptability, Tough Claws (treated as
  *     "contact-ish"), Strong Jaw / Mega Launcher / Iron Fist / Punk Rock /
  *     Technician / Tinted Lens / Sheer Force / Transistor / Dragon's Maw /
+ *     Fire Mane (Mega Pyroar, always-on ×1.5 Fire) / Eelevate (Mega Eelektross,
+ *     Levitate-like Ground immunity) /
  *     Aerilate-family / Filter / Solid Rock / Prism Armor / Multiscale /
  *     Ice Scales / Punk Rock (def) / Fluffy / Heatproof / Thick Fat /
  *     Water Absorb / Volt Absorb / Flash Fire / Storm Drain / Lightning Rod /
@@ -498,6 +500,7 @@ const SPREAD_SHAPES = new Set(["all-adjacent", "spread"]);
 function isGrounded(types: [PokemonType, PokemonType | null], ability?: string): boolean {
   if (types[0] === "flying" || types[1] === "flying") return false;
   if (ability === "levitate") return false;
+  if (ability === "eelevate") return false; // Champions Mega Eelektross — Levitate-like
   return true;
 }
 
@@ -689,6 +692,7 @@ export function calc(input: CalcInput): CalcOutput | null {
   if (dAbility === "well-baked-body" && move.type === "fire") return zeroResult(d);
   if (dAbility === "sap-sipper" && move.type === "grass") return zeroResult(d);
   if (dAbility === "levitate" && move.type === "ground") return zeroResult(d);
+  if (dAbility === "eelevate" && move.type === "ground") return zeroResult(d);
   if (dAbility === "earth-eater" && move.type === "ground") return zeroResult(d);
   if (dAbility === "dry-skin" && move.type === "water") return zeroResult(d);
 
@@ -937,6 +941,9 @@ export function calc(input: CalcInput): CalcOutput | null {
   }
   if (a.ability === "transistor" && moveType === "electric") {
     dmg = Math.floor(dmg * 1.3); notes.push("Transistor ×1.3");
+  }
+  if (a.ability === "fire-mane" && moveType === "fire") {
+    dmg = Math.floor(dmg * 1.5); notes.push("Fire Mane ×1.5"); // Champions Mega Pyroar — always-on, unlike Blaze
   }
   if (a.ability === "dragons-maw" && moveType === "dragon") {
     dmg = Math.floor(dmg * 1.5); notes.push("Dragon's Maw ×1.5");

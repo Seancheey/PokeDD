@@ -196,4 +196,18 @@ export const ABILITY_OVERRIDES: Record<
     name:  { "zh-Hans": "毒锁链", "zh-Hant": "毒鎖鏈" },
     short: { "zh-Hans": "用招式攻击命中时,有时会让对手陷入剧毒状态。", "zh-Hant": "用招式攻擊命中時,有時會讓對手陷入劇毒狀態。" },
   },
+
+  // ─── Champions Regulation M-B original Mega abilities ────────────────────
+  // Official localized names from the M-B launch coverage (うなぎのぼり/鰻鰻高升,
+  // ほのおのたてがみ/火焰鬃毛). EN name + JA name/flavor live in the PokeAPI CSVs;
+  // these fill the zh-Hans/zh-Hant gaps. (Raichu X/Y reuse stock electric-surge /
+  // no-guard, which already ship full translations.)
+  "eelevate": {
+    name:  { "zh-Hans": "鳗鳗高升", "zh-Hant": "鰻鰻高升" },
+    short: { "zh-Hans": "如同飘浮,免疫地面属性招式以及撒菱、毒菱、黏黏网,击倒对手时自身最高能力提升1阶。", "zh-Hant": "如同飄浮,免疫地面屬性招式以及撒菱、毒菱、黏黏網,擊倒對手時自身最高能力提升1階。" },
+  },
+  "fire-mane": {
+    name:  { "zh-Hans": "火焰鬃毛", "zh-Hant": "火焰鬃毛" },
+    short: { "zh-Hans": "火属性招式的威力始终变为1.5倍。", "zh-Hant": "火屬性招式的威力始終變為1.5倍。" },
+  },
 };

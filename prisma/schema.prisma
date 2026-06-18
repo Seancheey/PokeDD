@@ -12,6 +12,17 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Short links for shareable team URLs (pokedd.com/l/<id>). The `payload` is the
+// gzip+base64url team-share string; `hash` (sha256 of payload) dedups so the
+// same team always maps to one id.
+model ShortLink {
+  id        String   @id
+  hash      String   @unique
+  payload   String
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 model Pokemon {
   id          Int      @id @default(autoincrement())
   slug        String   @unique

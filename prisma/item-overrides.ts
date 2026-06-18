@@ -121,4 +121,57 @@ export const ITEM_OVERRIDES: Record<string, ItemOverride> = {
     name: { en: "Victreebelite", ja: "ウツボットナイト", "zh-Hans": "大食花进化石", "zh-Hant": "大食花進化石" },
     short: MEGA_DESC,
   },
+
+  // ─── Regulation M-B Champions-original Mega stones ──────────────────────────
+  // M-B launched 2026-06-16; Smogon has no usage data for these yet, so the
+  // importer injects them from these curated entries. Names follow the same
+  // convention as the M-A stones above ([species]ite / [species JA]ナイト /
+  // [species zh]进化石・進化石). Reconcile against the authoritative names if the
+  // July Smogon dump labels them differently.
+  staraptorite: {
+    name: { en: "Staraptorite", ja: "ムクホークナイト", "zh-Hans": "姆克鹰进化石", "zh-Hant": "姆克鷹進化石" },
+    short: MEGA_DESC,
+  },
+  scolipedite: {
+    name: { en: "Scolipedite", ja: "ペンドラーナイト", "zh-Hans": "蜈蚣王进化石", "zh-Hant": "蜈蚣王進化石" },
+    short: MEGA_DESC,
+  },
+  scraftite: {
+    name: { en: "Scraftite", ja: "ズルズキンナイト", "zh-Hans": "头巾混混进化石", "zh-Hant": "頭巾混混進化石" },
+    short: MEGA_DESC,
+  },
+  eelektrossite: {
+    name: { en: "Eelektrossite", ja: "シビルドンナイト", "zh-Hans": "麻麻鳗鱼王进化石", "zh-Hant": "麻麻鰻魚王進化石" },
+    short: MEGA_DESC,
+  },
+  pyroarite: {
+    name: { en: "Pyroarite", ja: "カエンジシナイト", "zh-Hans": "火炎狮进化石", "zh-Hant": "火炎獅進化石" },
+    short: MEGA_DESC,
+  },
+  malamarite: {
+    name: { en: "Malamarite", ja: "カラマネロナイト", "zh-Hans": "乌贼王进化石", "zh-Hant": "烏賊王進化石" },
+    short: MEGA_DESC,
+  },
+  barbaraclite: {
+    name: { en: "Barbaraclite", ja: "ガメノデスナイト", "zh-Hans": "龟足巨铠进化石", "zh-Hant": "龜足巨鎧進化石" },
+    short: MEGA_DESC,
+  },
+  dragalgite: {
+    name: { en: "Dragalgite", ja: "ドラミドロナイト", "zh-Hans": "毒藻龙进化石", "zh-Hant": "毒藻龍進化石" },
+    short: MEGA_DESC,
+  },
+  falinksite: {
+    name: { en: "Falinksite", ja: "タイレーツナイト", "zh-Hans": "列阵兵进化石", "zh-Hant": "列陣兵進化石" },
+    short: MEGA_DESC,
+  },
+  // Raichu has two Megas (X = Electric Surge, Y = No Guard); each takes its own
+  // stone, mirroring Charizardite X/Y (full-width Ｘ/Ｙ in ja/zh per house style).
+  "raichunite-x": {
+    name: { en: "Raichunite X", ja: "ライチュウナイトＸ", "zh-Hans": "雷丘进化石Ｘ", "zh-Hant": "雷丘進化石Ｘ" },
+    short: MEGA_DESC,
+  },
+  "raichunite-y": {
+    name: { en: "Raichunite Y", ja: "ライチュウナイトＹ", "zh-Hans": "雷丘进化石Ｙ", "zh-Hant": "雷丘進化石Ｙ" },
+    short: MEGA_DESC,
+  },
 };

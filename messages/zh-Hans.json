@@ -335,7 +335,18 @@
     "advancedFilterClear": "清空筛选",
     "saveHintTitle": "可以保存这套配置",
     "saveHintBody": "点击 ★ 即可把特性、道具、招式、努力值一起保存,之后在「我的宝可梦」中随时取用。",
-    "saveHintDismiss": "知道了"
+    "saveHintDismiss": "知道了",
+    "present": "展示模式",
+    "presentDefaultTitle": "我的队伍",
+    "presentTitlePlaceholder": "队伍名称",
+    "presentBackground": "背景",
+    "presentExport": "导出 PNG",
+    "presentExporting": "导出中…",
+    "presentClose": "关闭",
+    "presentScanHint": "扫码打开",
+    "presentToolbarHide": "自动隐藏工具栏",
+    "presentToolbarPin": "始终显示工具栏",
+    "presentShowStats": "显示性格与努力值"
   },
   "MyPokemon": {
     "title": "我的宝可梦",

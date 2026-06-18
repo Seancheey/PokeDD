@@ -335,7 +335,18 @@
     "advancedFilterClear": "Clear filters",
     "saveHintTitle": "Save this build for later",
     "saveHintBody": "Click the ★ to save a Pokémon's full config — ability, item, moves, EVs. You'll find them again from the My Pokémon panel.",
-    "saveHintDismiss": "Got it"
+    "saveHintDismiss": "Got it",
+    "present": "Present",
+    "presentDefaultTitle": "My Team",
+    "presentTitlePlaceholder": "Team title",
+    "presentBackground": "Background",
+    "presentExport": "Export PNG",
+    "presentExporting": "Exporting…",
+    "presentClose": "Close",
+    "presentScanHint": "Scan to open",
+    "presentToolbarHide": "Auto-hide toolbar",
+    "presentToolbarPin": "Keep toolbar visible",
+    "presentShowStats": "Show nature & EVs"
   },
   "MyPokemon": {
     "title": "My Pokémon",

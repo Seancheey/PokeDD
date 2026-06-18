@@ -335,7 +335,18 @@
     "advancedFilterClear": "クリア",
     "saveHintTitle": "この型を保存しておけます",
     "saveHintBody": "★ ボタンで特性・道具・技・努力値を含めて保存できます。あとから「マイポケモン」パネルで呼び出せます。",
-    "saveHintDismiss": "了解"
+    "saveHintDismiss": "了解",
+    "present": "発表モード",
+    "presentDefaultTitle": "マイチーム",
+    "presentTitlePlaceholder": "チーム名",
+    "presentBackground": "背景",
+    "presentExport": "PNGで保存",
+    "presentExporting": "保存中…",
+    "presentClose": "閉じる",
+    "presentScanHint": "スキャンで開く",
+    "presentToolbarHide": "ツールバーを自動的に隠す",
+    "presentToolbarPin": "ツールバーを常に表示",
+    "presentShowStats": "性格・努力値を表示"
   },
   "MyPokemon": {
     "title": "マイポケモン",

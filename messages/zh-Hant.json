@@ -335,7 +335,18 @@
     "advancedFilterClear": "清除篩選",
     "saveHintTitle": "可以儲存這套配置",
     "saveHintBody": "點擊 ★ 即可一併儲存特性、道具、招式與努力值,之後在「我的寶可夢」面板隨時取用。",
-    "saveHintDismiss": "知道了"
+    "saveHintDismiss": "知道了",
+    "present": "展示模式",
+    "presentDefaultTitle": "我的隊伍",
+    "presentTitlePlaceholder": "隊伍名稱",
+    "presentBackground": "背景",
+    "presentExport": "匯出 PNG",
+    "presentExporting": "匯出中…",
+    "presentClose": "關閉",
+    "presentScanHint": "掃碼開啟",
+    "presentToolbarHide": "自動隱藏工具列",
+    "presentToolbarPin": "始終顯示工具列",
+    "presentShowStats": "顯示性格與努力值"
   },
   "MyPokemon": {
     "title": "我的寶可夢",

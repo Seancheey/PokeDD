@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/cn";
 import { onLoadSavedMon } from "@/lib/my-pokemon";
 import { SaveMyPokemonButton } from "@/components/SaveMyPokemonButton";
+import { PresentMode } from "@/components/PresentMode";
 import {
   loadFormatPref,
   onFormatPrefChange,
@@ -107,6 +108,7 @@ export function TeamBuilderClient({
   const [hydrated, setHydrated] = useState(initialTeam != null);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [importOpen, setImportOpen] = useState(false);
+  const [presentOpen, setPresentOpen] = useState(false);
 
   // Show the first-time "save your build" tooltip once, then never again.
   // The flag is stored client-side, so we only flip it true after hydration
@@ -305,6 +307,13 @@ export function TeamBuilderClient({
             {copyState === "copied" ? t("copied") : t("copyLink")}
           </button>
           <button
+            onClick={() => setPresentOpen(true)}
+            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            disabled={team.slots.length === 0}
+          >
+            {t("present")}
+          </button>
+          <button
             onClick={clearTeam}
             className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
@@ -380,6 +389,17 @@ export function TeamBuilderClient({
             });
             setImportOpen(false);
           }}
+        />
+      ) : null}
+
+      {presentOpen ? (
+        <PresentMode
+          team={team}
+          pokemonBySlug={pokemonBySlug}
+          moveBySlug={moveBySlug}
+          abilityBySlug={abilityBySlug}
+          itemBySlug={itemBySlug}
+          onClose={() => setPresentOpen(false)}
         />
       ) : null}
     </div>
