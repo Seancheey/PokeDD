@@ -338,6 +338,8 @@
     "saveHintDismiss": "Got it",
     "present": "Present",
     "presentDefaultTitle": "My Team",
+    "presentDefaultByline": "by: ",
+    "presentBylinePlaceholder": "Author",
     "presentTitlePlaceholder": "Team title",
     "presentBackground": "Background",
     "presentExport": "Export PNG",

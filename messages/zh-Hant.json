@@ -338,6 +338,8 @@
     "saveHintDismiss": "知道了",
     "present": "展示模式",
     "presentDefaultTitle": "我的隊伍",
+    "presentDefaultByline": "by: ",
+    "presentBylinePlaceholder": "作者",
     "presentTitlePlaceholder": "隊伍名稱",
     "presentBackground": "背景",
     "presentExport": "匯出 PNG",

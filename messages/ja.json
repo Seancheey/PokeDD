@@ -338,6 +338,8 @@
     "saveHintDismiss": "了解",
     "present": "発表モード",
     "presentDefaultTitle": "マイチーム",
+    "presentDefaultByline": "by: ",
+    "presentBylinePlaceholder": "作成者",
     "presentTitlePlaceholder": "チーム名",
     "presentBackground": "背景",
     "presentExport": "PNGで保存",

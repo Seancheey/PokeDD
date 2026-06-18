@@ -30,3 +30,27 @@ body {
 body[data-menu-open] .pokedd-fab {
   display: none;
 }
+
+/* Present-mode sheet: slowly drift the diagonal stripe texture. Only the first
+   background layer (the 135° band) moves; the pinstripe, sheen, and base
+   gradient stay fixed (their entries below are 0 0). The band repeats every
+   32px along its 135° axis, so one seamless period is a (32·cos45°, 32·sin45°)
+   ≈ (22.627, 22.627) px offset — moving there and looping is invisible. */
+@keyframes present-stripe-drift {
+  from {
+    background-position: 0 0, 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 22.627px 22.627px, 0 0, 0 0, 0 0;
+  }
+}
+
+.present-stripe-anim {
+  animation: present-stripe-drift 9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .present-stripe-anim {
+    animation: none;
+  }
+}

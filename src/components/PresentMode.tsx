@@ -86,6 +86,10 @@ const ITEM_SPRITE_BASE =
 // the exported PNG is always rendered at this width × pixelRatio for consistency.
 const SHEET_WIDTH = 1180;
 
+// Shown faintly in the QR slot before the real short link resolves, so the slot
+// always occupies its full size and the sheet layout doesn't reflow.
+const QR_PLACEHOLDER = "https://www.pokedd.com";
+
 export function PresentMode({
   team,
   pokemonBySlug,
@@ -119,6 +123,7 @@ export function PresentMode({
   // Rendered into the contentEditable title ONCE. Never fed back from state, so
   // React won't rewrite the text node mid-edit (which would jump the caret).
   const initialTitle = useRef(t("presentDefaultTitle")).current;
+  const initialByline = useRef(t("presentDefaultByline")).current;
 
   // Encode the current team, mint a short link, and point the QR at it.
   // Recomputed when the team changes. Falls back to the full ?share= URL if the
@@ -226,37 +231,61 @@ export function PresentMode({
           <div
             ref={stageRef}
             style={{ width: sheetWidth, backgroundImage: bg.sheet }}
-            className="relative overflow-hidden rounded-3xl p-6 shadow-2xl"
+            className="present-stripe-anim relative overflow-hidden rounded-3xl p-6 shadow-2xl"
           >
             {/* Title banner + QR */}
             <div className="flex items-stretch gap-4">
               <div className="flex flex-1 items-center rounded-2xl bg-white/90 px-6 py-4 shadow">
-                <h2
-                  contentEditable
-                  suppressContentEditableWarning
-                  spellCheck={false}
-                  role="textbox"
-                  aria-label={t("presentTitlePlaceholder")}
-                  onInput={(e) => setTitle(e.currentTarget.textContent ?? "")}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="w-full cursor-text break-words rounded-lg px-2 font-[family-name:var(--font-display)] text-[2.75rem] font-bold uppercase leading-tight tracking-tight text-zinc-900 outline-none transition-colors hover:bg-black/[0.04] focus:bg-black/[0.05]"
-                >
-                  {initialTitle}
-                </h2>
-              </div>
-              {shareUrl ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl bg-white/90 px-3 py-2 shadow">
-                  <QrCode value={shareUrl} size={84} />
-                  <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                    {t("presentScanHint")}
+                {/* Title + byline baseline-aligned to each other, the pair
+                    vertically centered within the (taller) banner. */}
+                <div className="flex min-w-0 flex-1 items-baseline gap-3">
+                  <h2
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    role="textbox"
+                    aria-label={t("presentTitlePlaceholder")}
+                    onInput={(e) => setTitle(e.currentTarget.textContent ?? "")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="min-w-0 cursor-text break-words rounded-lg px-2 font-[family-name:var(--font-display)] text-[2.75rem] font-bold uppercase leading-tight tracking-tight text-zinc-900 outline-none transition-colors hover:bg-black/[0.04] focus:bg-black/[0.05]"
+                  >
+                    {initialTitle}
+                  </h2>
+                  <span
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    role="textbox"
+                    aria-label={t("presentBylinePlaceholder")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="min-w-0 cursor-text whitespace-nowrap rounded-lg px-2 font-[family-name:var(--font-display)] text-xl font-medium tracking-tight text-zinc-500 outline-none transition-colors hover:bg-black/[0.04] focus:bg-black/[0.05]"
+                  >
+                    {initialByline}
                   </span>
                 </div>
-              ) : null}
+              </div>
+              {/* Always rendered (even before the short link resolves) so the
+                  title banner's width — and thus the whole sheet's fit/scale —
+                  never shifts. Shows a faint placeholder QR until shareUrl is
+                  ready, then swaps in the real one. */}
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-white/90 px-3 py-2 shadow">
+                <div className={shareUrl ? undefined : "opacity-20"}>
+                  <QrCode value={shareUrl || QR_PLACEHOLDER} size={84} />
+                </div>
+                <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                  {t("presentScanHint")}
+                </span>
+              </div>
             </div>
 
             {/* 6 cards, horizontal 3-up grid */}
