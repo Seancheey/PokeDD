@@ -187,6 +187,7 @@
     "statusFreeze": "Frozen",
     "hpPctLabel": "HP %",
     "stageLabel": "Stat stages",
+    "metronomeLabel": "Metronome uses",
     "evLabel": "EV",
     "field": "Field conditions",
     "weather": "Weather",

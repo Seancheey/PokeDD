@@ -447,6 +447,21 @@ const CHAMPIONS_MB_NEW_STONES = [
   "raichunite-x", "raichunite-y",
 ];
 
+// Non-mega held items newly made legal in Regulation M-B (Champions S3, June 2026).
+// These already exist in the PokeAPI items.csv with full i18n names, but they
+// have no Smogon usage yet, so gamesFor()'s usage heuristic drops them. List
+// them here so they get tagged Champions-legal. See game8.co Reg M-B item list.
+const CHAMPIONS_MB_NEW_ITEMS = new Set<string>([
+  // Power-boost items
+  "expert-belt", "life-orb", "metronome", "muscle-band", "wise-glasses",
+  // Effect-extend (weather / terrain / screen) rocks + clay
+  "damp-rock", "heat-rock", "icy-rock", "smooth-rock", "light-clay",
+  // Recovery
+  "big-root",
+  // Other
+  "iron-ball", "shed-shell", "wide-lens", "zoom-lens",
+]);
+
 const TYPE_ID_TO_SLUG: Record<number, string> = {
   1: "normal", 2: "fighting", 3: "flying", 4: "poison", 5: "ground",
   6: "rock", 7: "bug", 8: "ghost", 9: "steel", 10: "fire",
@@ -1114,7 +1129,9 @@ async function main() {
 
   const championsItemSlugs = new Set(globalItemUsagePct.keys());
   function gamesFor(slug: string): string[] {
-    return championsItemSlugs.has(slug) || CHAMPIONS_MB_MEGA_STONES.has(slug)
+    return championsItemSlugs.has(slug)
+      || CHAMPIONS_MB_MEGA_STONES.has(slug)
+      || CHAMPIONS_MB_NEW_ITEMS.has(slug)
       ? ["pokemon-champions"]
       : [];
   }

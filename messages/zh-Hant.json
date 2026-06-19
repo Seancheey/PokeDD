@@ -187,6 +187,7 @@
     "statusFreeze": "冰凍",
     "hpPctLabel": "HP%",
     "stageLabel": "能力等級",
+    "metronomeLabel": "節拍器連續使用",
     "evLabel": "EV",
     "field": "場地狀態",
     "weather": "天氣",

@@ -187,6 +187,7 @@
     "statusFreeze": "こおり",
     "hpPctLabel": "HP割合",
     "stageLabel": "ランク補正",
+    "metronomeLabel": "メトロノーム連続使用",
     "evLabel": "EV",
     "field": "場の状態",
     "weather": "天候",

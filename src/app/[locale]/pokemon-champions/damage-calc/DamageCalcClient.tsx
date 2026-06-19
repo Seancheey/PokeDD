@@ -69,6 +69,8 @@ type SideState = {
   slug: string;
   ability: string;
   item: string;
+  /** Consecutive-use count for the Metronome item (0–5). Attacker-only. */
+  metronomeStacks: number;
   nature: Nature;
   status: Status;
   hpPct: number;
@@ -95,6 +97,7 @@ function defaultSide(p: CalcRefPokemon | undefined, attacking: boolean): SideSta
   return {
     slug: p?.slug ?? "",
     ability, item, nature,
+    metronomeStacks: 0,
     status: "none",
     hpPct: 100,
     vp,
@@ -205,6 +208,7 @@ export function DamageCalcClient({
       slug: normalizedSlug,
       ability: mon.ability || p.abilities[0] || "",
       item: mon.item || "",
+      metronomeStacks: 0,
       nature: (mon.nature as Nature) || "Hardy",
       status: "none",
       hpPct: 100,
@@ -260,6 +264,7 @@ export function DamageCalcClient({
         nature: atk.nature,
         ability: atk.ability || undefined,
         item: atk.item || undefined,
+        metronomeStacks: atk.item === "metronome" ? atk.metronomeStacks : undefined,
         status: atk.status,
         stageAtk: atk.stageAtk, stageSpa: atk.stageSpa,
         stageDef: atk.stageDef, stageSpd: atk.stageSpd,
@@ -881,6 +886,32 @@ function SidePanel({
           />
         </SmallField>
       </div>
+
+      {/* Metronome (item) consecutive-use stepper — attacker only. */}
+      {isAttacker && side.item === "metronome" ? (
+        <div className="mt-3 flex items-center justify-between rounded-md border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700">
+          <span className="font-semibold uppercase tracking-wider text-zinc-500">
+            {t("metronomeLabel")}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSide((s) => ({ ...s, metronomeStacks: Math.max(0, s.metronomeStacks - 1) }))}
+              className="h-5 w-5 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              aria-label="Decrease Metronome uses"
+            >−</button>
+            <span className="font-mono tabular-nums">
+              {side.metronomeStacks} (×{(1 + 0.2 * side.metronomeStacks).toFixed(1)})
+            </span>
+            <button
+              type="button"
+              onClick={() => setSide((s) => ({ ...s, metronomeStacks: Math.min(5, s.metronomeStacks + 1) }))}
+              className="h-5 w-5 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              aria-label="Increase Metronome uses"
+            >+</button>
+          </div>
+        </div>
+      ) : null}
 
       {/* EV inputs (compact: only the relevant offensive/defensive ones get full attention) */}
       <div className="mt-3">

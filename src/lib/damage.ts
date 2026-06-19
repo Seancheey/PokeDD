@@ -27,7 +27,8 @@
  *     (Multiscale, Levitate, Thick Fat, Filter, Wonder Guard, absorbs, …)
  *   - Item modifiers — Life Orb / Choice Band / Choice Specs / Expert Belt /
  *     Assault Vest / Eviolite / type-boost plates (×1.2 if matching attacker
- *     move type) / Muscle Band / Wise Glasses
+ *     move type) / Muscle Band / Wise Glasses / Metronome (×1.0–2.0 by
+ *     consecutive use) / Iron Ball (grounds defender → Ground hits Flying/Levitate)
  *   - Defender hazard chip (Stealth Rock + Spikes layers + Toxic Spikes)
  *
  * Deliberately NOT modeled (yet):
@@ -171,11 +172,11 @@ const ALWAYS_CRIT_MOVES = new Set([
   "zippy-zap",
 ]);
 
-// Multi-hit move effective-power multipliers. Damage is computed once at the
-// listed per-hit power and then multiplied — matching the standard damage-calc
-// convention of "assume every hit lands". Variable-hit moves use expected
-// hits from the canonical Gen 5+ distribution; Skill Link / Loaded Dice
-// overrides are applied at call-site inside calc().
+// Multi-hit moves. `hits` is the strike count for the `fixed` kind (the
+// increasing-power 3-hitters are modeled as N equal strikes). Variable-hit
+// kinds (`twoToFive`, `tenStop`) derive their full hit-count distribution in
+// multiHitDistribution(); calc() then convolves it with each strike's
+// independent damage roll to get the true total-damage distribution.
 type MultiHitKind = "fixed" | "twoToFive" | "tenStop";
 const MULTI_HIT_MOVES: Record<string, { kind: MultiHitKind; hits: number }> = {
   // Always 2 hits (multiplier 2)
@@ -212,26 +213,113 @@ const MULTI_HIT_MOVES: Record<string, { kind: MultiHitKind; hits: number }> = {
   "barrage":          { kind: "twoToFive", hits: 0 },
   "comet-punch":      { kind: "twoToFive", hits: 0 },
   "double-slap":      { kind: "twoToFive", hits: 0 },
-  // 1-10 hits, 90% per-hit accuracy — Population Bomb.
-  // Expected hits = Σ(k × P(k)) with stop-on-miss semantics ≈ 6.51.
+  // 1-10 hits, 90% per-hit accuracy, stop-on-miss — Population Bomb.
   "population-bomb":  { kind: "tenStop", hits: 0 },
 };
 
-function multiHitMultiplier(slug: string, ability?: string, item?: string): number | null {
+// Hit-count probability distribution, conditional on the move connecting.
+// Returns null for single-strike moves. Each entry is [hitCount, probability]
+// and the probabilities sum to 1. This replaces the old "expected hits ×
+// single roll" shortcut so the caller can build the true damage distribution.
+function multiHitDistribution(
+  slug: string,
+  ability?: string,
+  item?: string,
+): Array<[number, number]> | null {
   const m = MULTI_HIT_MOVES[slug];
   if (!m) return null;
-  if (m.kind === "fixed") return m.hits;
   const skillLink = ability === "skill-link";
   const loadedDice = item === "loaded-dice";
+
+  // Fixed-hit moves (incl. the increasing-power 3-hitters modeled as N equal
+  // strikes — same expected total, and each strike still rolls independently).
+  if (m.kind === "fixed") return [[m.hits, 1]];
+
   if (m.kind === "twoToFive") {
-    if (skillLink) return 5;
-    if (loadedDice) return 4.5; // always 4-5
-    return 3.1;
+    if (skillLink) return [[5, 1]];
+    if (loadedDice) return [[4, 0.5], [5, 0.5]]; // always 4-5
+    // Canonical Gen 5+ distribution → E = 3.0.
+    return [[2, 0.375], [3, 0.375], [4, 0.125], [5, 0.125]];
   }
-  // tenStop: Population Bomb-style with 90% per-hit accuracy.
-  if (skillLink) return 10;
-  if (loadedDice) return 8.5; // always 4-10, biased high; pick 8.5 as the practical average
-  return 6.51;
+
+  // tenStop: Population Bomb — up to 10 strikes, each rolling its own accuracy
+  // check, stopping on the first miss.
+  if (skillLink) return [[10, 1]];
+  if (loadedDice) {
+    // Loaded Dice ignores the accuracy checks and lands 4-10 strikes; modeled
+    // as uniform over 4-10 (E = 7).
+    return Array.from({ length: 7 }, (_, i) => [i + 4, 1 / 7] as [number, number]);
+  }
+  // Per-hit accuracy is 90%, lifted to 99% by Wide Lens (×1.1). Conditional on
+  // the first strike landing, the number of strikes k follows
+  //   P(k) = p^(k-1)·(1-p)  for k = 1..9,   P(10) = p^9.
+  // Its mean Σ_{m=0..9} p^m = (1-p^10)/(1-p) is 6.51 at p=0.9 and 9.56 at 0.99.
+  const p = item === "wide-lens" ? 0.99 : 0.9;
+  const dist: Array<[number, number]> = [];
+  for (let k = 1; k <= 9; k++) dist.push([k, Math.pow(p, k - 1) * (1 - p)]);
+  dist.push([10, Math.pow(p, 9)]);
+  return dist;
+}
+
+// Discrete convolution of two integer-valued probability mass functions.
+function convolvePmf(a: Map<number, number>, b: Map<number, number>): Map<number, number> {
+  const out = new Map<number, number>();
+  for (const [va, pa] of a) {
+    for (const [vb, pb] of b) {
+      const v = va + vb;
+      out.set(v, (out.get(v) ?? 0) + pa * pb);
+    }
+  }
+  return out;
+}
+
+// Build the total-damage distribution from the single-hit damage and a
+// hit-count distribution. Each strike rolls its own independent 85-100%
+// variance, so the sum of several strikes concentrates around its mean far
+// more tightly than a single ±15% band would suggest. Returns 16 ascending
+// stratified quantiles (preserving the existing 16-bar UI and the
+// "fraction of rolls that KO" estimate) plus the true min/max of the sum.
+function buildRollDistribution(
+  singleHitDmg: number,
+  hitDist: Array<[number, number]> | null,
+): { rolls: number[]; min: number; max: number } {
+  // Single strike (or non-multi-hit): the 16 rolls ARE the damage values.
+  if (!hitDist || (hitDist.length === 1 && hitDist[0][0] === 1)) {
+    const rolls: number[] = [];
+    for (let r = 85; r <= 100; r++) rolls.push(Math.floor((singleHitDmg * r) / 100));
+    return { rolls, min: rolls[0], max: rolls[rolls.length - 1] };
+  }
+
+  // Per-hit damage pmf — 16 equally likely values (ties merged).
+  const perHit = new Map<number, number>();
+  for (let r = 85; r <= 100; r++) {
+    const v = Math.floor((singleHitDmg * r) / 100);
+    perHit.set(v, (perHit.get(v) ?? 0) + 1 / 16);
+  }
+
+  // Total pmf = Σ_h P(h) · (h-fold convolution of the per-hit pmf).
+  const maxHits = Math.max(...hitDist.map(([h]) => h));
+  const probByHits = new Map(hitDist);
+  let conv = new Map<number, number>([[0, 1]]);
+  const total = new Map<number, number>();
+  for (let h = 1; h <= maxHits; h++) {
+    conv = convolvePmf(conv, perHit);
+    const ph = probByHits.get(h);
+    if (ph) for (const [dmg, pr] of conv) total.set(dmg, (total.get(dmg) ?? 0) + pr * ph);
+  }
+
+  // Cumulative distribution, then 16 stratified quantiles at q = (i+0.5)/16.
+  const sorted = [...total.entries()].sort((a, b) => a[0] - b[0]);
+  let acc = 0;
+  const cdf: Array<[number, number]> = sorted.map(([v, pr]) => [v, (acc += pr)]);
+  const rolls: number[] = [];
+  let j = 0;
+  for (let i = 0; i < 16; i++) {
+    const q = (i + 0.5) / 16;
+    while (j < cdf.length - 1 && cdf[j][1] < q) j++;
+    rolls.push(cdf[j][0]);
+  }
+  return { rolls, min: sorted[0][0], max: sorted[sorted.length - 1][0] };
 }
 
 function isContact(slug: string): boolean { return CONTACT_MOVES.has(slug); }
@@ -424,6 +512,9 @@ export type CalcInput = {
     nature: Nature;
     ability?: string;
     item?: string;
+    /** Consecutive-use count for the Metronome item (0 = first use → ×1.0,
+     *  capped at 5 → ×2.0). Ignored unless item === "metronome". */
+    metronomeStacks?: number;
     status: Status;
     stageAtk: number; // -6..+6
     stageSpa: number;
@@ -691,8 +782,12 @@ export function calc(input: CalcInput): CalcOutput | null {
   if (dAbility === "flash-fire" && move.type === "fire") return zeroResult(d);
   if (dAbility === "well-baked-body" && move.type === "fire") return zeroResult(d);
   if (dAbility === "sap-sipper" && move.type === "grass") return zeroResult(d);
-  if (dAbility === "levitate" && move.type === "ground") return zeroResult(d);
-  if (dAbility === "eelevate" && move.type === "ground") return zeroResult(d);
+  // Iron Ball grounds the holder, so Ground moves are no longer nullified by
+  // Levitate (or our Champions Eelevate clone) nor by a Flying typing (handled
+  // in the effectiveness section below).
+  const ironBallGrounded = d.item === "iron-ball" && move.type === "ground";
+  if (dAbility === "levitate" && move.type === "ground" && !ironBallGrounded) return zeroResult(d);
+  if (dAbility === "eelevate" && move.type === "ground" && !ironBallGrounded) return zeroResult(d);
   if (dAbility === "earth-eater" && move.type === "ground") return zeroResult(d);
   if (dAbility === "dry-skin" && move.type === "water") return zeroResult(d);
 
@@ -997,6 +1092,15 @@ export function calc(input: CalcInput): CalcOutput | null {
   if (a.item === "wise-glasses" && !isPhysical) {
     dmg = Math.floor(dmg * 1.1); notes.push("Wise Glasses ×1.1");
   }
+  // Metronome (item): +20% per consecutive use of the same move, capping at
+  // ×2.0 after 5 prior uses. stacks 0 = first use (×1.0, no boost shown).
+  if (a.item === "metronome") {
+    const stacks = Math.max(0, Math.min(5, Math.floor(a.metronomeStacks ?? 0)));
+    if (stacks > 0) {
+      const mult = 1 + 0.2 * stacks;
+      dmg = Math.floor(dmg * mult); notes.push(`Metronome ×${mult.toFixed(1)}`);
+    }
+  }
   // Type-enhancing items + plates: ×1.2 when the move type matches.
   if (a.item && TYPE_BOOST_ITEMS[a.item] === moveType) {
     dmg = Math.floor(dmg * 1.2);
@@ -1030,7 +1134,15 @@ export function calc(input: CalcInput): CalcOutput | null {
 
   // Type effectiveness
   const defTypes = d.types.filter((t): t is PokemonType => !!t);
-  let eff = effectivenessAgainst(moveType, defTypes);
+  // Iron Ball grounding: a grounded Flying-type takes neutral damage from
+  // Ground moves, so drop the Flying typing from the effectiveness lookup
+  // (a pure Flying-type then resolves to ×1).
+  let effTypes = defTypes;
+  if (ironBallGrounded && defTypes.includes("flying")) {
+    effTypes = defTypes.filter((t) => t !== "flying");
+    notes.push("Iron Ball grounded");
+  }
+  let eff = effectivenessAgainst(moveType, effTypes);
 
   // Wonder Guard: only super-effective hits land.
   if (dAbility === "wonder-guard" && eff <= 1) return zeroResult(d, notes.concat("Wonder Guard"));
@@ -1070,21 +1182,26 @@ export function calc(input: CalcInput): CalcOutput | null {
     dmg = Math.floor(dmg * 0.5); notes.push("Burn ×0.5");
   }
 
-  // ── Multi-hit moves ──────────────────────────────────────────────────────
-  // Apply the move's effective hit count (Triple Axel 1+2+3 = 6×, fixed-hit
-  // multi-attacks, and probability-weighted hits for 2-5 / 1-10 moves with
-  // Skill Link / Loaded Dice overrides).
-  const multiHit = multiHitMultiplier(move.slug, a.ability, a.item);
-  if (multiHit !== null) {
-    dmg = Math.floor(dmg * multiHit);
-    notes.push(`Multi-hit ×${multiHit % 1 === 0 ? multiHit : multiHit.toFixed(2)} (${move.slug})`);
+  // ── Multi-hit moves + damage distribution ────────────────────────────────
+  // `dmg` is now the SINGLE-strike damage. Rather than collapse a multi-hit
+  // move to "expected hits × one shared roll", we keep the hit-count
+  // distribution and convolve it with each strike's independent 85-100% roll,
+  // so both the spread and the KO odds reflect the real distribution.
+  // Skill Link / Loaded Dice / Wide Lens overrides live in the dist function.
+  const hitDist = multiHitDistribution(move.slug, a.ability, a.item);
+  if (hitDist) {
+    const expected = hitDist.reduce((s, [h, pr]) => s + h * pr, 0);
+    const minH = Math.min(...hitDist.map(([h]) => h));
+    const maxH = Math.max(...hitDist.map(([h]) => h));
+    const label = minH === maxH ? `${minH}` : `${minH}–${maxH}, avg ${expected.toFixed(2)}`;
+    notes.push(`Multi-hit: ${label} hits (${move.slug})`);
+    if (a.item === "wide-lens" && move.slug === "population-bomb") {
+      notes.push("Wide Lens ×1.1 acc → more hits");
+    }
   }
 
-  // ── 16-roll variance ─────────────────────────────────────────────────────
-  const rolls: number[] = [];
-  for (let r = 85; r <= 100; r++) rolls.push(Math.floor((dmg * r) / 100));
-  const min = rolls[0];
-  const max = rolls[rolls.length - 1];
+  // ── Damage distribution (per-strike independent rolls) ────────────────────
+  const { rolls, min, max } = buildRollDistribution(dmg, hitDist);
 
   // Hazard chip (informational — affects "is OHKO?" mentally, doesn't enter the formula)
   const hazardPct = hazardChipPct(d, field.hazards);
