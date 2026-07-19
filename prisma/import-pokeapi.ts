@@ -208,16 +208,16 @@ function forceI18n(
 // Pokémon Champions chaos dumps from Smogon. We pull both formats because
 // usage skews very differently between singles and doubles — players want
 // to see the right stats for whichever format they're building for.
-//   • VGC = official Pokémon Champions doubles (Regulation M-A)
-//   • BSS = official Pokémon Champions singles (Regulation M-A)
+//   • VGC = official Pokémon Champions doubles
+//   • BSS = official Pokémon Champions singles
 // In each list we prefer the all-ladder (0) dump for the broadest roster /
 // move / item coverage and fall back to higher cutoffs if the broader file
 // isn't on disk yet.
-// Newest regulation first: once Smogon publishes the Regulation M-B chaos dump
-// (≈2026-07-01) and `refresh-data.sh` lands the `regmb` files, the importer
-// picks them up automatically and the hand-tagged M-B roster overlay below
-// becomes redundant (but stays harmless). Until then these regmb files are
-// absent and the importer falls through to the latest regma dump.
+// Newest regulation first: the Regulation M-B chaos dumps (first month:
+// 2026-06) are live and preferred; the regma entries remain as a fallback
+// for machines where `refresh-data.sh` hasn't landed the regmb files yet.
+// With real regmb stats present, the hand-tagged M-B roster overlay below
+// is redundant but harmless.
 const SMOGON_FILES_DOUBLES = [
   "smogon-championsvgc2026regmb-0.json",
   "smogon-championsvgc2026regmb-1500.json",
@@ -271,10 +271,13 @@ const SMOGON_NAME_FIXUPS: Record<string, string> = {
   "meowstic-m-mega": "meowstic-mega",
   "mimikyu": "mimikyu-disguised",
   "morpeko": "morpeko-full-belly",
+  "gourgeist": "gourgeist-average",
   "oinkologne-f": "oinkologne-female",
   "palafin": "palafin-zero",
+  "pyroar": "pyroar-male",
   "tauros-paldea-aqua": "tauros-paldea-aqua-breed",
   "tauros-paldea-blaze": "tauros-paldea-blaze-breed",
+  "tauros-paldea-combat": "tauros-paldea-combat-breed",
 };
 function smogonNameToSlug(smogonName: string, knownSlugs: Set<string>): string | null {
   const lower = smogonName.toLowerCase().replace(/\./g, "").replace(/\s+/g, "-");

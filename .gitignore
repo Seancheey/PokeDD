@@ -42,5 +42,6 @@ yarn-error.log*
 next-env.d.ts
 data/pokeapi/*.csv
 data/pokeapi/*.json
+data/pokeapi/*.json.bak
 prisma/dev.db
 prisma/dev.db-journal
