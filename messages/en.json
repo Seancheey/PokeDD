@@ -21,7 +21,7 @@
     "closeMenu": "Close menu"
   },
   "Hub": {
-    "regulationBadge": "Reg M-A",
+    "regulationBadge": "Reg M-C",
     "regulationLabel": "Current Regulation",
     "heroTitle": "pokeDD — Pokémon Champions Toolkit",
     "heroSubtitle": "No account. No login. Share a team with a URL.",
@@ -29,7 +29,7 @@
     "ctaDamageCalc": "Damage Calculator",
     "ctaTeams": "Browse Teams",
     "topByUsageTitle": "Top 10 by usage",
-    "topByUsageSubtitle": "Most-used Pokémon in the current ruleset.",
+    "topByUsageSubtitle": "Latest available Smogon usage data · {regulation}.",
     "seeFullList": "See full list →",
     "rankShort": "#{rank}",
     "tools": {
@@ -46,11 +46,19 @@
         "desc": "Roll-accurate against Pikalytics. Doubles, weather, terrain, screens."
       }
     },
-    "dataNote": "Usage data is illustrative and refreshes from public competitive sources."
+    "dataNote": "Usage data is illustrative and refreshes from public competitive sources.",
+    "regulationPeriod": "September 9 – December 2, 2026 (UTC)",
+    "newTitle": "New in Regulation M-C",
+    "newSubtitle": "Meet the new contenders, including Rillaboom, Indeedee, and six more Mega Evolutions.",
+    "newMega": "New Mega Evolution",
+    "allNewPokemon": "Explore all new Pokémon",
+    "officialRules": "Official M-C rules ↗",
+    "usagePending": "M-C usage statistics are not available yet. The rankings below use the latest earlier regulation.",
+    "usageUnknown": "Source unavailable"
   },
   "List": {
     "title": "Pokémon",
-    "subtitle": "{count, plural, =1 {1 result} other {# results}} · Regulation M-A",
+    "subtitle": "{count, plural, =1 {1 result} other {# results}} · Regulation M-C",
     "search": "Search Pokémon…",
     "typeLabel": "Type:",
     "clear": "Clear",
@@ -286,7 +294,7 @@
     "formatSingles": "Singles",
     "formatDoubles": "Doubles",
     "regulation": "Regulation",
-    "regulationMA": "Reg M-A",
+    "regulationMA": "Reg M-C",
     "noItem": "(no item)",
     "moveSlot": "Move {n}",
     "moveNone": "(none)",

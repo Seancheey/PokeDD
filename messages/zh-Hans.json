@@ -21,7 +21,7 @@
     "closeMenu": "关闭菜单"
   },
   "Hub": {
-    "regulationBadge": "规则 M-A",
+    "regulationBadge": "规则 M-C",
     "regulationLabel": "当前规则",
     "heroTitle": "口袋滴滴 — 宝可梦冠军工具",
     "heroSubtitle": "无需账号。无需登录。一条 URL 即可分享。",
@@ -29,7 +29,7 @@
     "ctaDamageCalc": "伤害计算",
     "ctaTeams": "浏览队伍",
     "topByUsageTitle": "使用率前 10",
-    "topByUsageSubtitle": "当前规则下使用最多的宝可梦。",
+    "topByUsageSubtitle": "最新可用的 Smogon 使用率数据 · {regulation}。",
     "seeFullList": "查看完整列表 →",
     "rankShort": "#{rank}",
     "tools": {
@@ -46,11 +46,19 @@
         "desc": "与 Pikalytics 数据一致。支持双打、天气、场地、屏障。"
       }
     },
-    "dataNote": "使用率数据仅供参考,定期从公开对战数据更新。"
+    "dataNote": "使用率数据仅供参考,定期从公开对战数据更新。",
+    "regulationPeriod": "2026年9月9日－12月2日（UTC）",
+    "newTitle": "规则 M-C 新增宝可梦",
+    "newSubtitle": "轰擂金刚猩、爱管侍及六种新增超级进化等全新阵容，等你探索。",
+    "newMega": "新增超级进化",
+    "allNewPokemon": "查看所有新增宝可梦",
+    "officialRules": "M-C 官方规则 ↗",
+    "usagePending": "M-C 使用率数据尚未发布。下方排名使用此前规则的最新数据。",
+    "usageUnknown": "来源未知"
   },
   "List": {
     "title": "宝可梦",
-    "subtitle": "{count, plural, other {# 个结果}} · 规则 M-A",
+    "subtitle": "{count, plural, other {# 个结果}} · 规则 M-C",
     "search": "搜索宝可梦…",
     "typeLabel": "属性:",
     "clear": "清除",
@@ -286,7 +294,7 @@
     "formatSingles": "单打",
     "formatDoubles": "双打",
     "regulation": "规则",
-    "regulationMA": "规则 M-A",
+    "regulationMA": "规则 M-C",
     "noItem": "(无道具)",
     "moveSlot": "招式 {n}",
     "moveNone": "(无)",

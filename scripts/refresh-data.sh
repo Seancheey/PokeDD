@@ -25,10 +25,11 @@ PA_BASE="https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv"
 # to view, so we need both dumps on disk.
 #   VGC = official doubles (Regulation M-A)
 #   BSS = official singles (Regulation M-A)
-# Regulation M-B is the active ruleset since 2026-06-16; its first chaos dump
-# lands ≈2026-07-01. The importer prefers regmb files and falls back to regma,
+# Regulation M-C started 2026-09-09; its first monthly dump is due in October.
+# The importer prefers regmc, then falls back to historical regmb/regma,
 # so keeping both here means we grab whichever month/reg Smogon has published.
 SMOGON_FORMATS=(
+  "gen9championsvgc2026regmc" "gen9championsbssregmc"
   "gen9championsvgc2026regmb" "gen9championsbssregmb"
   "gen9championsvgc2026regma" "gen9championsbssregma"
 )

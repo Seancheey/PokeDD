@@ -174,4 +174,26 @@ export const ITEM_OVERRIDES: Record<string, ItemOverride> = {
     name: { en: "Raichunite Y", ja: "ライチュウナイトＹ", "zh-Hans": "雷丘进化石Ｙ", "zh-Hant": "雷丘進化石Ｙ" },
     short: MEGA_DESC,
   },
+  // Regulation M-C Mega Stones.
+  "absolite-z": {
+    name: {"en": "Absolite Z", "ja": "アブソルナイトＺ", "zh-Hans": "阿勃梭鲁进化石Ｚ", "zh-Hant": "阿勃梭魯進化石Ｚ"},
+    short: MEGA_DESC,
+  },
+  "garchompite-z": {
+    name: {"en": "Garchompite Z", "ja": "ガブリアスナイトＺ", "zh-Hans": "烈咬陆鲨进化石Ｚ", "zh-Hant": "烈咬陸鯊進化石Ｚ"},
+    short: MEGA_DESC,
+  },
+  "lucarionite-z": {
+    name: {"en": "Lucarionite Z", "ja": "ルカリオナイトＺ", "zh-Hans": "路卡利欧进化石Ｚ", "zh-Hant": "路卡利歐進化石Ｚ"},
+    short: MEGA_DESC,
+  },
+  "golisopite": {
+    name: {"en": "Golisopite", "ja": "グソクムシャナイト", "zh-Hans": "具甲武者进化石", "zh-Hant": "具甲武者進化石"},
+    short: MEGA_DESC,
+  },
+  "baxcalibrite": {
+    name: {"en": "Baxcalibrite", "ja": "セグレイブナイト", "zh-Hans": "戟脊龙进化石", "zh-Hant": "戟脊龍進化石"},
+    short: MEGA_DESC,
+  },
+
 };

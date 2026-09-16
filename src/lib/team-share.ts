@@ -1,3 +1,5 @@
+import { CURRENT_REGULATION } from "./champions-regulation";
+
 /**
  * Share-codec for Team Builder.
  *
@@ -78,7 +80,7 @@ export async function decodeTeam(payload: string): Promise<TeamShare | null> {
 
 export const EMPTY_TEAM: TeamShare = {
   v: 1,
-  reg: "M-A",
+  reg: CURRENT_REGULATION,
   fmt: "doubles",
   slots: [],
 };
