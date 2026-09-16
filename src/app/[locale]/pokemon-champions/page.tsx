@@ -2,6 +2,7 @@ import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import { TypeChip } from "@/components/TypeChip";
 import type { PokemonType } from "@/lib/types";
 import type { Locale } from "@/i18n/routing";
@@ -18,11 +19,14 @@ export default async function HubPage({
   setRequestLocale(locale);
   const t = await getTranslations("Hub");
 
-  const top = await prisma.pokemon.findMany({
-    where: { rank: { not: null } },
-    orderBy: { rank: "asc" },
-    take: 10,
-  });
+  const top = await cachedQuery("pokemon:hub-top", null, () =>
+    prisma.pokemon.findMany({
+      where: { rank: { not: null } },
+      orderBy: { rank: "asc" },
+      take: 10,
+      omit: { createdAt: true, updatedAt: true },
+    }),
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">

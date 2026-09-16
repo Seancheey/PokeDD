@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import type { Locale } from "@/i18n/routing";
 import { localizedItemName, localizedItemDesc } from "@/lib/i18n-pokemon";
 import { ItemsCategoryFilter } from "./ItemsCategoryFilter";
@@ -24,25 +25,30 @@ export default async function ItemsListPage({
   const q = get("q");
   const cat = get("cat");
 
-  const items = await prisma.item.findMany({
-    where: {
-      // Only show items tagged for the current game (Pokémon Champions).
-      // Pokéballs, healing items, evolution stones, repels, key items, TMs
-      // and so on were imported with `games: []` so they're excluded here.
-      games: { contains: '"pokemon-champions"' },
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { nameI18n: { contains: q, mode: "insensitive" } },
-              { slug: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-      ...(cat ? { category: cat } : {}),
-    },
-    orderBy: { usagePct: "desc" },
-  });
+  const items = await cachedQuery(
+    "item:list",
+    { q: q ?? null, category: cat ?? null },
+    () =>
+      prisma.item.findMany({
+        where: {
+          // Only show items tagged for the current game (Pokémon Champions).
+          // Pokéballs, healing items, evolution stones, repels, key items, TMs
+          // and so on were imported with `games: []` so they're excluded here.
+          games: { contains: '"pokemon-champions"' },
+          ...(q
+            ? {
+                OR: [
+                  { name: { contains: q, mode: "insensitive" } },
+                  { nameI18n: { contains: q, mode: "insensitive" } },
+                  { slug: { contains: q, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+          ...(cat ? { category: cat } : {}),
+        },
+        orderBy: { usagePct: "desc" },
+      }),
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
@@ -87,7 +93,6 @@ export default async function ItemsListPage({
                 <td className="px-3 py-2 whitespace-nowrap">
                   <Link
                     href={`/pokemon-champions/items/${it.slug}`}
-                    prefetch={false}
                     className="font-semibold text-zinc-950 hover:text-red-600 dark:text-zinc-50"
                   >
                     {localizedItemName(it, locale as Locale)}

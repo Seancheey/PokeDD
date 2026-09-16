@@ -2,6 +2,7 @@ import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import { TypeChip } from "@/components/TypeChip";
 import { POKEMON_TYPES, type PokemonType } from "@/lib/types";
 import type { Locale } from "@/i18n/routing";
@@ -85,7 +86,16 @@ export default async function PokemonListPage({
     }));
   }
 
-  let pokemon = await prisma.pokemon.findMany({ where, orderBy });
+  let pokemon = await cachedQuery(
+    "pokemon:list",
+    { q: sp.q ?? null, types: selectedTypes, sort, dir },
+    () =>
+      prisma.pokemon.findMany({
+        where,
+        orderBy,
+        omit: { createdAt: true, updatedAt: true },
+      }),
+  );
   if (sort === "bst") {
     pokemon = pokemon
       .map((p) => ({ ...p, _bst: p.hp + p.atk + p.def + p.spa + p.spd + p.spe }))
@@ -167,7 +177,6 @@ export default async function PokemonListPage({
                   <td className="px-3 py-2">
                     <Link
                       href={`/pokemon-champions/pokemon/${p.slug}`}
-                      prefetch={false}
                       className="font-semibold text-zinc-950 hover:text-red-600 dark:text-zinc-50"
                     >
                       {localizedPokemonName(p, locale as Locale)}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import { TypeChip } from "@/components/TypeChip";
 import { POKEMON_TYPES, type PokemonType } from "@/lib/types";
 import { effectivenessAgainst } from "@/lib/type-chart";
@@ -26,7 +27,12 @@ export default async function PokemonDetailPage({
   const loc = locale as Locale;
   const t = await getTranslations("Detail");
 
-  const p = await prisma.pokemon.findUnique({ where: { slug } });
+  const p = await cachedQuery("pokemon:detail", { slug }, () =>
+    prisma.pokemon.findUnique({
+      where: { slug },
+      omit: { createdAt: true, updatedAt: true },
+    }),
+  );
   if (!p) notFound();
 
   const bst = p.hp + p.atk + p.def + p.spa + p.spd + p.spe;
@@ -44,22 +50,29 @@ export default async function PokemonDetailPage({
   // localized names and link to detail pages.
   const allAbilitySlugs = [...new Set([...abilityList, ...(p.hiddenAbility ? [p.hiddenAbility] : [])])];
   const [abilityRows, moveRows, formRows] = await Promise.all([
-    allAbilitySlugs.length > 0
-      ? prisma.ability.findMany({ where: { slug: { in: allAbilitySlugs } } })
-      : Promise.resolve([]),
-    learnableMoveSlugs.length > 0
-      ? prisma.move.findMany({ where: { slug: { in: learnableMoveSlugs } } })
-      : Promise.resolve([]),
-    prisma.pokemon.findMany({
-      where: {
-        dexNo: p.dexNo,
-        OR: [
-          { slug: p.slug },
-          { games: { contains: '"pokemon-champions"' } },
-        ],
-      },
-      orderBy: [{ slug: "asc" }],
-    }),
+    cachedQuery("pokemon-detail:abilities", { slugs: allAbilitySlugs }, () =>
+      allAbilitySlugs.length > 0
+        ? prisma.ability.findMany({ where: { slug: { in: allAbilitySlugs } } })
+        : Promise.resolve([]),
+    ),
+    cachedQuery("pokemon-detail:moves", { slugs: learnableMoveSlugs }, () =>
+      learnableMoveSlugs.length > 0
+        ? prisma.move.findMany({ where: { slug: { in: learnableMoveSlugs } } })
+        : Promise.resolve([]),
+    ),
+    cachedQuery("pokemon-detail:forms", { dexNo: p.dexNo, slug: p.slug }, () =>
+      prisma.pokemon.findMany({
+        where: {
+          dexNo: p.dexNo,
+          OR: [
+            { slug: p.slug },
+            { games: { contains: '"pokemon-champions"' } },
+          ],
+        },
+        orderBy: [{ slug: "asc" }],
+        omit: { createdAt: true, updatedAt: true },
+      }),
+    ),
   ]);
 
   const abilityNameBySlug = new Map(

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import { TypeChip } from "@/components/TypeChip";
 import type { PokemonType } from "@/lib/types";
 import type { Locale } from "@/i18n/routing";
@@ -26,24 +27,29 @@ export default async function MoveDetailPage({
   const td = await getTranslations("Moves.detail");
   const cols = await getTranslations("Moves.columns");
 
-  const m = await prisma.move.findUnique({ where: { slug } });
+  const m = await cachedQuery("move:detail", { slug }, () =>
+    prisma.move.findUnique({ where: { slug } }),
+  );
   if (!m) notFound();
 
   // Pokémon that can learn this move. The slug is wrapped in JSON-quotes
   // in the `learnableMoves` array, so the substring match `"foo"` is safe —
   // it can't false-match a prefix or suffix of another slug.
-  const learners = await prisma.pokemon.findMany({
-    where: {
-      AND: [
-        { learnableMoves: { contains: `"${slug}"` } },
-        { games: { contains: '"pokemon-champions"' } },
+  const learners = await cachedQuery("move:learners", { slug }, () =>
+    prisma.pokemon.findMany({
+      where: {
+        AND: [
+          { learnableMoves: { contains: `"${slug}"` } },
+          { games: { contains: '"pokemon-champions"' } },
+        ],
+      },
+      orderBy: [
+        { rank: { sort: "asc", nulls: "last" } },
+        { dexNo: "asc" },
       ],
-    },
-    orderBy: [
-      { rank: { sort: "asc", nulls: "last" } },
-      { dexNo: "asc" },
-    ],
-  });
+      omit: { createdAt: true, updatedAt: true },
+    }),
+  );
 
   const displayName = localizedMoveName(m, locale as Locale);
   const effect = localizedMoveEffect(m, locale as Locale);

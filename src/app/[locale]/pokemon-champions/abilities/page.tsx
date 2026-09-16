@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import type { Locale } from "@/i18n/routing";
 import { localizedAbilityName, localizedAbilityShortDesc } from "@/lib/i18n-pokemon";
 
@@ -22,18 +23,20 @@ export default async function AbilitiesListPage({
   const get = (k: string) => (Array.isArray(sp[k]) ? sp[k][0] : sp[k]);
   const q = get("q");
 
-  const abilities = await prisma.ability.findMany({
-    where: q
-      ? {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { nameI18n: { contains: q, mode: "insensitive" } },
-            { slug: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : {},
-    orderBy: { usagePct: "desc" },
-  });
+  const abilities = await cachedQuery("ability:list", { q: q ?? null }, () =>
+    prisma.ability.findMany({
+      where: q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { nameI18n: { contains: q, mode: "insensitive" } },
+              { slug: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {},
+      orderBy: { usagePct: "desc" },
+    }),
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
@@ -75,7 +78,6 @@ export default async function AbilitiesListPage({
                 <td className="px-3 py-2 whitespace-nowrap">
                   <Link
                     href={`/pokemon-champions/abilities/${a.slug}`}
-                    prefetch={false}
                     className="font-semibold text-zinc-950 hover:text-red-600 dark:text-zinc-50"
                   >
                     {localizedAbilityName(a, locale as Locale)}

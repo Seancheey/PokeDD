@@ -1,5 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import type { Locale } from "@/i18n/routing";
 import {
   localizedPokemonName,
@@ -28,14 +29,19 @@ export default async function DamageCalcPage({
   const loc = locale as Locale;
 
   const [pokemon, moves, abilities, items] = await Promise.all([
-    prisma.pokemon.findMany({
-      where: { games: { contains: '"pokemon-champions"' } },
-    }),
-    prisma.move.findMany(),
-    prisma.ability.findMany(),
-    prisma.item.findMany({
-      where: { games: { contains: '"pokemon-champions"' } },
-    }),
+    cachedQuery("pokemon:champions-reference", null, () =>
+      prisma.pokemon.findMany({
+        where: { games: { contains: '"pokemon-champions"' } },
+        omit: { createdAt: true, updatedAt: true },
+      }),
+    ),
+    cachedQuery("move:all", null, () => prisma.move.findMany()),
+    cachedQuery("ability:all", null, () => prisma.ability.findMany()),
+    cachedQuery("item:champions-reference", null, () =>
+      prisma.item.findMany({
+        where: { games: { contains: '"pokemon-champions"' } },
+      }),
+    ),
   ]);
 
   const refPokemon: CalcRefPokemon[] = pokemon.map((p) => {

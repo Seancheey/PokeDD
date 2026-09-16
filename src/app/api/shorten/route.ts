@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { prisma } from "@/lib/db";
+import { cachedQuery, putCachedValue } from "@/lib/cache";
+
+async function primeShortLinkCache(link: {
+  id: string;
+  hash: string;
+  payload: string;
+}) {
+  await Promise.all([
+    putCachedValue("short-link:by-hash", { hash: link.hash }, { id: link.id }),
+    putCachedValue(
+      "short-link:by-id",
+      { id: link.id },
+      { payload: link.payload },
+    ),
+  ]);
+}
 
 // POST { payload } → { id }. Stores the gzip+base64url team-share string and
 // returns a short id used for pokedd.com/l/<id>. Idempotent: the same payload
@@ -20,7 +36,12 @@ export async function POST(req: Request) {
 
   const hash = crypto.createHash("sha256").update(payload).digest("hex");
 
-  const existing = await prisma.shortLink.findUnique({ where: { hash } });
+  const existing = await cachedQuery("short-link:by-hash", { hash }, () =>
+    prisma.shortLink.findUnique({
+      where: { hash },
+      select: { id: true },
+    }),
+  );
   if (existing) return NextResponse.json({ id: existing.id });
 
   // Generate a URL-safe id; retry on the (astronomically unlikely) id collision.
@@ -28,6 +49,7 @@ export async function POST(req: Request) {
     const id = crypto.randomBytes(12).toString("base64url");
     try {
       const created = await prisma.shortLink.create({ data: { id, hash, payload } });
+      await primeShortLinkCache(created);
       return NextResponse.json({ id: created.id });
     } catch (e: unknown) {
       // P2002 = unique constraint. If the hash raced in from a concurrent
@@ -35,7 +57,10 @@ export async function POST(req: Request) {
       const code = (e as { code?: string })?.code;
       if (code === "P2002") {
         const row = await prisma.shortLink.findUnique({ where: { hash } });
-        if (row) return NextResponse.json({ id: row.id });
+        if (row) {
+          await primeShortLinkCache(row);
+          return NextResponse.json({ id: row.id });
+        }
         // else it was an id collision — loop and try a fresh id
       } else {
         throw e;

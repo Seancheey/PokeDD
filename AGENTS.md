@@ -105,6 +105,7 @@ These are non-obvious; they tripped me up at some point.
 ### next-intl v4
 
 - **Use `Link` from `@/i18n/navigation`, not `next/link`.** The i18n version prepends the locale prefix correctly. Native `<a href>` does not.
+- **Our `Link` has `prefetch={false}` by default.** Entity pages render hundreds of links (a Pokémon's ~100-move learnset, a move's learners), and next/link's viewport prefetch turned one page view into hundreds of server requests. Every page is `force-dynamic` with no `loading.tsx`, so a prefetch only fetches the shared layout shell and the client discards it — there is nothing to gain. Do not opt links back in unless a route becomes static or gains a loading boundary.
 - **Call `setRequestLocale(locale)` in every page that uses translations.** Without it, the page becomes dynamic and statically-rendered locales break.
 - **Locales are `en`, `ja`, `zh-Hans`, `zh-Hant`.** Hyphenated; the routing uses BCP 47 script tags (`Hans`/`Hant`), not region codes.
 - **Server components use `getTranslations()`** (async). Client components use `useTranslations()` (sync).

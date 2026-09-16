@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import { TypeChip } from "@/components/TypeChip";
 import { POKEMON_TYPES, type PokemonType } from "@/lib/types";
 import type { Locale } from "@/i18n/routing";
@@ -58,10 +59,15 @@ export default async function MovesListPage({
   if (typeFilter.length > 0) where.type = { in: typeFilter };
   if (cat === "physical" || cat === "special" || cat === "status") where.category = cat;
 
-  const moves = await prisma.move.findMany({
-    where,
-    orderBy: { [SORT_FIELD[sort]]: dir },
-  });
+  const moves = await cachedQuery(
+    "move:list",
+    { q: q ?? null, types: typeFilter, category: cat ?? null, sort, dir },
+    () =>
+      prisma.move.findMany({
+        where,
+        orderBy: { [SORT_FIELD[sort]]: dir },
+      }),
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
@@ -110,7 +116,6 @@ export default async function MovesListPage({
                 <td className="px-3 py-2">
                   <Link
                     href={`/pokemon-champions/moves/${m.slug}`}
-                    prefetch={false}
                     className="font-semibold text-zinc-950 hover:text-red-600 dark:text-zinc-50"
                   >
                     {localizedMoveName(m, locale as Locale)}

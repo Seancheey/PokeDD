@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 
 // pokedd.com/l/<id> → 302 to the team builder with the decoded ?share= payload.
 // Lives outside [locale] (and is excluded from the i18n proxy matcher) so the
@@ -11,7 +12,12 @@ export async function GET(
   const { id } = await params;
   const base = "/pokemon-champions/team-builder";
 
-  const link = await prisma.shortLink.findUnique({ where: { id } });
+  const link = await cachedQuery("short-link:by-id", { id }, () =>
+    prisma.shortLink.findUnique({
+      where: { id },
+      select: { payload: true },
+    }),
+  );
   if (!link) {
     return NextResponse.redirect(new URL(base, _req.url));
   }

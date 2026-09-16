@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import type { Locale } from "@/i18n/routing";
 import {
   localizedAbilityName,
@@ -23,15 +24,20 @@ export default async function AbilityDetailPage({
   const t = await getTranslations("Abilities");
   const td = await getTranslations("Abilities.detail");
 
-  const ability = await prisma.ability.findUnique({ where: { slug } });
+  const ability = await cachedQuery("ability:detail", { slug }, () =>
+    prisma.ability.findUnique({ where: { slug } }),
+  );
   if (!ability) notFound();
 
   // Holders: filter in JS because we'd need a JSON-array-contains query for
   // both the abilities slugs AND the hidden ability. With ~232 Champions-roster
   // mons this is cheap.
-  const allMons = await prisma.pokemon.findMany({
-    where: { games: { contains: '"pokemon-champions"' } },
-  });
+  const allMons = await cachedQuery("pokemon:champions-reference", null, () =>
+    prisma.pokemon.findMany({
+      where: { games: { contains: '"pokemon-champions"' } },
+      omit: { createdAt: true, updatedAt: true },
+    }),
+  );
   const holders = allMons.filter((m) => {
     try {
       const list: string[] = JSON.parse(m.abilities);

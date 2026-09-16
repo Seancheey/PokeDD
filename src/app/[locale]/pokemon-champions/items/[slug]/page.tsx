@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
+import { cachedQuery } from "@/lib/cache";
 import type { Locale } from "@/i18n/routing";
 import { localizedItemName, localizedItemDesc } from "@/lib/i18n-pokemon";
 
@@ -17,7 +18,9 @@ export default async function ItemDetailPage({
   const t = await getTranslations("Items");
   const td = await getTranslations("Items.detail");
 
-  const item = await prisma.item.findUnique({ where: { slug } });
+  const item = await cachedQuery("item:detail", { slug }, () =>
+    prisma.item.findUnique({ where: { slug } }),
+  );
   if (!item) notFound();
 
   return (
