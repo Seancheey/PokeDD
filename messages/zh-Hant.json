@@ -21,7 +21,7 @@
     "closeMenu": "關閉選單"
   },
   "Hub": {
-    "regulationBadge": "規則 M-A",
+    "regulationBadge": "規則 M-C",
     "regulationLabel": "現行規則",
     "heroTitle": "口袋滴滴 — 寶可夢冠軍工具",
     "heroSubtitle": "無需帳號。無需登入。一條 URL 即可分享。",
@@ -29,7 +29,7 @@
     "ctaDamageCalc": "傷害計算",
     "ctaTeams": "瀏覽隊伍",
     "topByUsageTitle": "使用率前 10",
-    "topByUsageSubtitle": "現行規則下使用最多的寶可夢。",
+    "topByUsageSubtitle": "最新可用的 Smogon 使用率資料 · {regulation}。",
     "seeFullList": "查看完整列表 →",
     "rankShort": "#{rank}",
     "tools": {
@@ -46,11 +46,19 @@
         "desc": "與 Pikalytics 數值一致。支援雙打、天氣、場地、屏障。"
       }
     },
-    "dataNote": "使用率資料僅供參考,定期從公開對戰資料更新。"
+    "dataNote": "使用率資料僅供參考,定期從公開對戰資料更新。",
+    "regulationPeriod": "2026年9月9日－12月2日（UTC）",
+    "newTitle": "規則 M-C 新增寶可夢",
+    "newSubtitle": "轟擂金剛猩、愛管侍及六種新增超級進化等全新陣容，等你探索。",
+    "newMega": "新增超級進化",
+    "allNewPokemon": "查看所有新增寶可夢",
+    "officialRules": "M-C 官方規則 ↗",
+    "usagePending": "M-C 使用率資料尚未發布。下方排名使用此前規則的最新資料。",
+    "usageUnknown": "來源未知"
   },
   "List": {
     "title": "寶可夢",
-    "subtitle": "{count, plural, other {# 個結果}} · 規則 M-A",
+    "subtitle": "{count, plural, other {# 個結果}} · 規則 M-C",
     "search": "搜尋寶可夢…",
     "typeLabel": "屬性:",
     "clear": "清除",
@@ -285,7 +293,7 @@
     "formatSingles": "單打",
     "formatDoubles": "雙打",
     "regulation": "規則",
-    "regulationMA": "規則 M-A",
+    "regulationMA": "規則 M-C",
     "noItem": "(無道具)",
     "moveSlot": "招式 {n}",
     "moveNone": "(無)",

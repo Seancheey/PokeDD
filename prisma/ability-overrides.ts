@@ -18,6 +18,15 @@ export const ABILITY_OVERRIDES: Record<
   string,
   { name?: LocMap; short?: LocMap }
 > = {
+  "aura-guard": {
+    name: { en: "Aura Guard" },
+    short: {
+      en: "Halves damage taken from moves that make contact.",
+      ja: "接触する技から受けるダメージを半分にする。",
+      "zh-Hans": "受到接触类招式的伤害减半。",
+      "zh-Hant": "受到接觸類招式的傷害減半。",
+    },
+  },
   "anger-shell": {
     name:  { "zh-Hans": "愤怒甲壳", "zh-Hant": "憤怒甲殼" },
     short: { "zh-Hans": "HP降到一半时,防御与特防下降,攻击、特攻、速度提升。", "zh-Hant": "HP降到一半時,防禦與特防下降,攻擊、特攻、速度提升。" },

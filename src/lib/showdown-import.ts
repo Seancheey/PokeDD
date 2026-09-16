@@ -1,3 +1,5 @@
+import { CURRENT_REGULATION } from "./champions-regulation";
+
 /**
  * Parses a Pokémon Showdown / PokePaste team export into our internal
  * TeamShare format.
@@ -137,7 +139,7 @@ export function convertEvToSp(
 } {
   const raw = ev.map((e) => Math.round(Math.max(0, e) / 8));
   const clamped = raw.map((v) => Math.min(PER_STAT_SP_CAP, v));
-  let sp = [...clamped] as number[];
+  const sp = [...clamped] as number[];
 
   // Trim total down to 66 by removing 1 SP at a time from the highest stat.
   // Ties broken by index so trims are deterministic (HP first if HP and Atk tie).
@@ -343,7 +345,7 @@ export function parseShowdownText(
     return {
       team: {
         v: 1,
-        reg: opts?.regulation ?? "M-A",
+        reg: opts?.regulation ?? CURRENT_REGULATION,
         fmt: opts?.format ?? "doubles",
         slots: [],
       },
@@ -508,7 +510,7 @@ export function parseShowdownText(
   return {
     team: {
       v: 1,
-      reg: opts?.regulation ?? "M-A",
+      reg: opts?.regulation ?? CURRENT_REGULATION,
       fmt: opts?.format ?? "doubles",
       slots,
     },

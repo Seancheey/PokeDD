@@ -21,7 +21,7 @@
     "closeMenu": "メニューを閉じる"
   },
   "Hub": {
-    "regulationBadge": "レギュ M-A",
+    "regulationBadge": "レギュ M-C",
     "regulationLabel": "現行レギュレーション",
     "heroTitle": "pokeDD — ポケモンチャンピオンズ ツール",
     "heroSubtitle": "アカウント不要。ログイン不要。URLでチームを共有。",
@@ -29,7 +29,7 @@
     "ctaDamageCalc": "ダメージ計算",
     "ctaTeams": "チームを見る",
     "topByUsageTitle": "使用率トップ10",
-    "topByUsageSubtitle": "現行ルールで最もよく使われているポケモン。",
+    "topByUsageSubtitle": "最新のSmogon使用率データ · {regulation}。",
     "seeFullList": "全リストを見る →",
     "rankShort": "#{rank}",
     "tools": {
@@ -46,11 +46,19 @@
         "desc": "Pikalyticsと一致する精度。ダブル・天候・フィールド・壁にも対応。"
       }
     },
-    "dataNote": "使用率データは参考値です。公開されている対戦データから定期的に更新します。"
+    "dataNote": "使用率データは参考値です。公開されている対戦データから定期的に更新します。",
+    "regulationPeriod": "2026年9月9日～12月2日（UTC）",
+    "newTitle": "レギュレーションM-Cの新登場ポケモン",
+    "newSubtitle": "ゴリランダーやイエッサン、6種類のメガシンカなど、新たなポケモンをチェック。",
+    "newMega": "新たなメガシンカ",
+    "allNewPokemon": "新登場のポケモンをすべて見る",
+    "officialRules": "M-Cの公式ルール ↗",
+    "usagePending": "M-Cの使用率データはまだ公開されていません。以下は以前のレギュレーションの最新データです。",
+    "usageUnknown": "出典不明"
   },
   "List": {
     "title": "ポケモン",
-    "subtitle": "{count, plural, other {# 件}} · レギュレーションM-A",
+    "subtitle": "{count, plural, other {# 件}} · レギュレーションM-C",
     "search": "ポケモンを検索…",
     "typeLabel": "タイプ:",
     "clear": "クリア",
@@ -285,7 +293,7 @@
     "formatSingles": "シングル",
     "formatDoubles": "ダブル",
     "regulation": "レギュレーション",
-    "regulationMA": "レギュ M-A",
+    "regulationMA": "レギュ M-C",
     "noItem": "(もちものなし)",
     "moveSlot": "わざ {n}",
     "moveNone": "(なし)",

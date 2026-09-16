@@ -25,6 +25,11 @@ import path from "node:path";
 import { ABILITY_OVERRIDES } from "./ability-overrides";
 import { ITEM_OVERRIDES } from "./item-overrides";
 import { MOVE_OVERRIDES } from "./move-overrides";
+import mcData from "./data/champions-mc.json";
+import {
+  CHAMPIONS_MC_ADDITIONS, CURRENT_REGULATION_SLUG,
+  REGULATION_MC_START, REGULATION_MC_END,
+} from "../src/lib/champions-regulation";
 
 const DATA = path.join(__dirname, "../data/pokeapi");
 const prisma = new PrismaClient();
@@ -213,12 +218,12 @@ function forceI18n(
 // In each list we prefer the all-ladder (0) dump for the broadest roster /
 // move / item coverage and fall back to higher cutoffs if the broader file
 // isn't on disk yet.
-// Newest regulation first: once Smogon publishes the Regulation M-B chaos dump
-// (≈2026-07-01) and `refresh-data.sh` lands the `regmb` files, the importer
-// picks them up automatically and the hand-tagged M-B roster overlay below
-// becomes redundant (but stays harmless). Until then these regmb files are
-// absent and the importer falls through to the latest regma dump.
+// Prefer M-C when published; keep older data as explicitly labelled historical
+// usage until then. Eligibility is independent of usage for the M-C additions.
 const SMOGON_FILES_DOUBLES = [
+  "smogon-championsvgc2026regmc-0.json",
+  "smogon-championsvgc2026regmc-1500.json",
+  "smogon-championsvgc2026regmc-1760.json",
   "smogon-championsvgc2026regmb-0.json",
   "smogon-championsvgc2026regmb-1500.json",
   "smogon-championsvgc2026regmb-1760.json",
@@ -227,6 +232,9 @@ const SMOGON_FILES_DOUBLES = [
   "smogon-championsvgc2026regma-1760.json",
 ];
 const SMOGON_FILES_SINGLES = [
+  "smogon-championsbssregmc-0.json",
+  "smogon-championsbssregmc-1500.json",
+  "smogon-championsbssregmc-1760.json",
   "smogon-championsbssregmb-0.json",
   "smogon-championsbssregmb-1500.json",
   "smogon-championsbssregmb-1760.json",
@@ -258,6 +266,20 @@ function condense(slug: string): string {
 // Examples: "Incineroar" → "incineroar", "Calyrex-Shadow" → "calyrex-shadow",
 // "Indeedee-F" → "indeedee-female", "Iron Hands" → "iron-hands".
 const SMOGON_NAME_FIXUPS: Record<string, string> = {
+  "indeedee": "indeedee-male",
+  "toxtricity": "toxtricity-amped",
+  "squawkabilly": "squawkabilly-green-plumage",
+  "squawkabilly-blue": "squawkabilly-blue-plumage",
+  "squawkabilly-yellow": "squawkabilly-yellow-plumage",
+  "squawkabilly-white": "squawkabilly-white-plumage",
+  "farfetch’d": "farfetchd",
+  "farfetch'd": "farfetchd",
+  "sirfetch’d": "sirfetchd",
+  "sirfetch'd": "sirfetchd",
+  "pyroar": "pyroar-male",
+  "gourgeist": "gourgeist-average",
+  "meowstic-f-mega": "meowstic-mega",
+  "meowstic-m-mega": "meowstic-mega",
   "aegislash": "aegislash-shield",
   "basculegion": "basculegion-male",
   "indeedee-f": "indeedee-female",
@@ -267,14 +289,13 @@ const SMOGON_NAME_FIXUPS: Record<string, string> = {
   "maushold": "maushold-family-of-four",
   "meowstic": "meowstic-male",
   "meowstic-f": "meowstic-female",
-  "meowstic-f-mega": "meowstic-mega",
-  "meowstic-m-mega": "meowstic-mega",
   "mimikyu": "mimikyu-disguised",
   "morpeko": "morpeko-full-belly",
   "oinkologne-f": "oinkologne-female",
   "palafin": "palafin-zero",
   "tauros-paldea-aqua": "tauros-paldea-aqua-breed",
   "tauros-paldea-blaze": "tauros-paldea-blaze-breed",
+  "tauros-paldea-combat": "tauros-paldea-combat-breed",
 };
 function smogonNameToSlug(smogonName: string, knownSlugs: Set<string>): string | null {
   const lower = smogonName.toLowerCase().replace(/\./g, "").replace(/\s+/g, "-");
@@ -447,6 +468,17 @@ const CHAMPIONS_MB_NEW_STONES = [
   "raichunite-x", "raichunite-y",
 ];
 
+const CHAMPIONS_MC_POKEMON = new Set<string>(CHAMPIONS_MC_ADDITIONS);
+const CHAMPIONS_MC_STONES = [
+  "absolite-z", "salamencite", "garchompite-z", "lucarionite-z", "golisopite", "baxcalibrite",
+];
+const CHAMPIONS_MC_ITEMS = new Set([
+  ...CHAMPIONS_MC_STONES, "stick", "rocky-helmet", "air-balloon", "red-card",
+  "binding-band", "eject-button", "normal-gem", "terrain-extender",
+  "electric-seed", "psychic-seed", "misty-seed", "grassy-seed",
+]);
+const mcLearnsets: Record<string, string[]> = mcData.learnsets;
+
 const TYPE_ID_TO_SLUG: Record<number, string> = {
   1: "normal", 2: "fighting", 3: "flying", 4: "poison", 5: "ground",
   6: "rock", 7: "bug", 8: "ghost", 9: "steel", 10: "fire",
@@ -577,6 +609,10 @@ async function main() {
   const itemSlugByCondensed = new Map<string, string>(
     itemMetaRaw.map((i) => [condense(i.identifier), i.identifier]),
   );
+  // Register stones before reading usage, so future M-C dumps resolve to the
+  // same slugs as the explicit item injection (rather than duplicate items).
+  for (const slug of CHAMPIONS_MC_STONES) itemSlugByCondensed.set(condense(slug), slug);
+  itemSlugByCondensed.set("leek", "stick");
   const syntheticItemNameBySlug = new Map<string, string>();
   const mapSmogonAbility = (name: string) => abilitySlugByCondensed.get(condense(name)) ?? null;
   const mapSmogonItem = (name: string) => {
@@ -584,7 +620,8 @@ async function main() {
     return itemSlugByCondensed.get(condense(name)) ?? null;
   };
   const mapSmogonMove = (name: string) => moveSlugByCondensed.get(condense(name)) ?? null;
-  const allPokemonSlugs = new Set(pokemonRows.map((p) => p.identifier));
+  const allPokemonSlugs = new Set([...pokemonRows.map((p) => p.identifier), ...CHAMPIONS_MC_ADDITIONS]);
+  abilitySlugByCondensed.set("auraguard", "aura-guard");
 
   type UsageStats = {
     topAbilities: Array<{ slug: string; pct: number }>;
@@ -920,21 +957,55 @@ async function main() {
       regulations: JSON.stringify([]),
       // Champions roster proxy: tag for "pokemon-champions" if this Pokémon
       // showed up in the Smogon dump (i.e. people play it competitively) OR it
-      // is a Regulation M-B addition not yet covered by Smogon usage data.
+      // is an M-B or M-C addition not yet covered by Smogon usage data.
       // Mons absent from both stay in the DB as catalog reference but are
       // filtered out of list views.
       games: JSON.stringify(
-        rawCountBySlug.has(p.identifier) || CHAMPIONS_MB_POKEMON.has(p.identifier)
+        rawCountBySlug.has(p.identifier) || CHAMPIONS_MB_POKEMON.has(p.identifier) || CHAMPIONS_MC_POKEMON.has(p.identifier)
           ? ["pokemon-champions"]
           : [],
       ),
-      learnableMoves: JSON.stringify(learnableMoves),
+      learnableMoves: JSON.stringify(mcLearnsets[p.identifier] ?? learnableMoves),
       usageStats: hasUsage ? JSON.stringify(usageStats) : "{}",
     };
   });
 
-  await prisma.pokemon.deleteMany();
-  await prisma.pokemon.createMany({ data: pokemonRowsToInsert });
+  // The Z-A CSV forms can be absent or have no abilities. Tracked Champions
+  // overrides make the six M-C Megas reproducible after a fresh CSV download.
+  for (const form of mcData.forms) {
+    const base = pokemonRowsToInsert.find((p) => p.slug === form.baseSlug);
+    if (!base) throw new Error(`Missing base Pokémon for ${form.slug}`);
+    const names = JSON.parse(base.nameI18n) as Record<Locale, string>;
+    const suffix = form.slug.endsWith("-z") ? "Z" : "";
+    const prefixes: Record<Locale, string> = { en: "Mega ", ja: "メガ", "zh-Hans": "超级", "zh-Hant": "超級" };
+    for (const loc of Object.keys(names) as Locale[]) {
+      names[loc] = prefixes[loc] + names[loc] + (suffix ? (loc === "en" ? " Z" : "Ｚ") : "");
+    }
+    const existingIndex = pokemonRowsToInsert.findIndex((p) => p.slug === form.slug);
+    const usage = smogonRankBySlug.get(form.slug);
+    const formUsage = {
+      singles: singlesStats.usageBySlug.get(form.slug) ?? null,
+      doubles: doublesStats.usageBySlug.get(form.slug) ?? null,
+    };
+    const row = {
+      ...base, slug: form.slug, name: names.en, nameI18n: i18nJson(names),
+      type1: form.type1, type2: form.type2, weight: form.weight,
+      hp: form.hp, atk: form.atk, def: form.def, spa: form.spa, spd: form.spd, spe: form.spe,
+      abilities: JSON.stringify([form.ability]), hiddenAbility: null,
+      spriteUrl: SPRITE(form.spriteId),
+      usagePct: usage?.usagePct ?? 0, rank: usage?.rank ?? null,
+      usageStats: formUsage.singles || formUsage.doubles ? JSON.stringify(formUsage) : "{}",
+      learnableMoves: JSON.stringify(mcLearnsets[form.baseSlug]),
+      games: JSON.stringify(["pokemon-champions"]),
+    };
+    if (existingIndex >= 0) pokemonRowsToInsert[existingIndex] = row;
+    else pokemonRowsToInsert.push(row);
+  }
+  for (const pokemon of pokemonRowsToInsert) {
+    if (JSON.parse(pokemon.games).includes("pokemon-champions")) {
+      pokemon.regulations = JSON.stringify([CURRENT_REGULATION_SLUG]);
+    }
+  }
   console.log(`  → ${pokemonRowsToInsert.length} Pokémon`);
 
   // MOVES ─────────────────────────────────────────────────────────────────────
@@ -1005,9 +1076,6 @@ async function main() {
       usagePct: globalMoveUsagePct.get(m.identifier) ?? 0,
     };
   });
-
-  await prisma.move.deleteMany();
-  await prisma.move.createMany({ data: moveRowsToInsert });
   console.log(`  → ${moveRowsToInsert.length} moves`);
 
   // ABILITIES ─────────────────────────────────────────────────────────────────
@@ -1078,8 +1146,17 @@ async function main() {
       };
     });
 
-  await prisma.ability.deleteMany();
-  await prisma.ability.createMany({ data: abilityRowsToInsert });
+  // Aura Guard debuted with Mega Lucario Z and is absent from older CSVs.
+  const auraGuard = ABILITY_OVERRIDES["aura-guard"];
+  const auraRow = {
+    slug: "aura-guard", name: "Aura Guard", nameI18n: JSON.stringify(auraGuard.name),
+    shortDesc: auraGuard.short!.en!, shortDescI18n: JSON.stringify(auraGuard.short),
+    longDesc: auraGuard.short!.en!, longDescI18n: JSON.stringify(auraGuard.short),
+    usagePct: globalAbilityUsagePct.get("aura-guard") ?? 0,
+  };
+  const auraIndex = abilityRowsToInsert.findIndex((a) => a.slug === "aura-guard");
+  if (auraIndex >= 0) abilityRowsToInsert[auraIndex] = auraRow;
+  else abilityRowsToInsert.push(auraRow);
   console.log(`  → ${abilityRowsToInsert.length} abilities`);
 
   // ITEMS ─────────────────────────────────────────────────────────────────────
@@ -1114,7 +1191,7 @@ async function main() {
 
   const championsItemSlugs = new Set(globalItemUsagePct.keys());
   function gamesFor(slug: string): string[] {
-    return championsItemSlugs.has(slug) || CHAMPIONS_MB_MEGA_STONES.has(slug)
+    return championsItemSlugs.has(slug) || CHAMPIONS_MB_MEGA_STONES.has(slug) || CHAMPIONS_MC_ITEMS.has(slug)
       ? ["pokemon-champions"]
       : [];
   }
@@ -1173,7 +1250,7 @@ async function main() {
   // no Smogon usage yet). Skip any that already landed via items.csv or the
   // synthetic-item path above so the July Smogon refresh doesn't double-create.
   const injectedItemSlugs = new Set(itemRowsToInsert.map((i) => i.slug));
-  for (const slug of CHAMPIONS_MB_NEW_STONES) {
+  for (const slug of [...CHAMPIONS_MB_NEW_STONES, ...CHAMPIONS_MC_STONES]) {
     if (injectedItemSlugs.has(slug)) continue;
     const override = ITEM_OVERRIDES[slug];
     const name = override?.name?.en ?? titleCaseFromSlug(slug);
@@ -1192,11 +1269,41 @@ async function main() {
       usagePct: globalItemUsagePct.get(slug) ?? 0,
     });
   }
-
-  await prisma.item.deleteMany();
-  await prisma.item.createMany({ data: itemRowsToInsert });
   console.log(`  → ${itemRowsToInsert.length} items`);
 
+  // Validate every addition before any write, then swap catalog tables atomically.
+  // Existing short links are independent and are never touched by this import.
+  for (const slug of CHAMPIONS_MC_ADDITIONS) {
+    const p = pokemonRowsToInsert.find((row) => row.slug === slug);
+    if (!p || !JSON.parse(p.games).includes("pokemon-champions")
+      || [p.hp, p.atk, p.def, p.spa, p.spd, p.spe].some((n) => n <= 0)
+      || !JSON.parse(p.abilities).length || !JSON.parse(p.learnableMoves).length) {
+      throw new Error(`Incomplete M-C Pokémon: ${slug}`);
+    }
+    for (const move of JSON.parse(p.learnableMoves) as string[]) {
+      if (!moveRowsToInsert.some((m) => m.slug === move)) throw new Error(`Missing move ${move} for ${slug}`);
+    }
+    for (const ability of [...JSON.parse(p.abilities), p.hiddenAbility].filter(Boolean) as string[]) {
+      if (!abilityRowsToInsert.some((a) => a.slug === ability)) throw new Error(`Missing ability ${ability}`);
+    }
+  }
+  if (process.argv.includes("--dry-run")) {
+    console.log(`Dry run passed: all ${CHAMPIONS_MC_ADDITIONS.length} M-C entries are complete. No database writes.`);
+    return;
+  }
+  await prisma.$transaction([
+    prisma.pokemon.deleteMany(), prisma.pokemon.createMany({ data: pokemonRowsToInsert }),
+    prisma.move.deleteMany(), prisma.move.createMany({ data: moveRowsToInsert }),
+    prisma.ability.deleteMany(), prisma.ability.createMany({ data: abilityRowsToInsert }),
+    prisma.item.deleteMany(), prisma.item.createMany({ data: itemRowsToInsert }),
+    prisma.regulation.upsert({
+      where: { slug: CURRENT_REGULATION_SLUG },
+      create: { slug: CURRENT_REGULATION_SLUG, name: "Regulation M-C", maxVp: 66,
+        allowTera: false, validFrom: new Date(REGULATION_MC_START), validTo: new Date(REGULATION_MC_END) },
+      update: { name: "Regulation M-C", maxVp: 66, allowTera: false,
+        validFrom: new Date(REGULATION_MC_START), validTo: new Date(REGULATION_MC_END) },
+    }),
+  ]);
   console.log("Done.");
 }
 

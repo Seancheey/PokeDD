@@ -87,3 +87,29 @@ a ⭐ — it helps me prioritize features and translations.
 ## License
 
 MIT.
+
+## Regulation M-C data update
+
+M-C runs from 2026-09-09 02:00 UTC through 2026-12-02 01:59 UTC.
+The [official rules](https://champions-news.pokemon-home.com/en/page/816.html)
+and [eligible roster](https://web-view.app.pokemonchampions.jp/battle/pages/events/rs178713870219xeaaio/en/pokemon.html)
+are the eligibility sources. `src/lib/champions-regulation.ts` lists all new
+entries, including alternate genders/colors and the six Mega Evolutions.
+
+`prisma/data/champions-mc.json` contains the new forms' stats, types, weights,
+abilities, and Champions learnsets, checked against Pokémon Showdown on
+2026-09-16 (source URLs are recorded in the file). These tracked overrides
+survive a fresh PokeAPI CSV download. Mega forms inherit their base form's
+Champions learnset; Aura Guard and the five new stones are supplied by the
+translated overrides. Salamencite already exists in PokeAPI.
+
+```bash
+npm run db:import -- --dry-run  # validates all additions without database writes
+npm run db:import             # atomically replaces catalog data; keeps short links
+node --import tsx scripts/test-regulation-mc.ts
+```
+
+The importer prefers M-C usage dumps, then M-B/M-A. Until Smogon publishes
+M-C statistics, the landing page labels the imported historical regulation
+and explicitly says M-C usage is pending. Roster eligibility never depends
+on a new Pokémon appearing in those usage dumps.

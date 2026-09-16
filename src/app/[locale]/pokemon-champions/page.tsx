@@ -6,6 +6,7 @@ import { TypeChip } from "@/components/TypeChip";
 import type { PokemonType } from "@/lib/types";
 import type { Locale } from "@/i18n/routing";
 import { localizedPokemonName } from "@/lib/i18n-pokemon";
+import { CHAMPIONS_MC_ADDITIONS, CHAMPIONS_MC_MEGAS, CURRENT_REGULATION, REGULATION_MC_SOURCE, usageRegulation } from "@/lib/champions-regulation";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +19,20 @@ export default async function HubPage({
   setRequestLocale(locale);
   const t = await getTranslations("Hub");
 
-  const top = await prisma.pokemon.findMany({
-    where: { rank: { not: null } },
-    orderBy: { rank: "asc" },
-    take: 10,
-  });
+  const [top, additions] = await Promise.all([
+    prisma.pokemon.findMany({
+      where: { rank: { not: null }, games: { contains: '"pokemon-champions"' } },
+      orderBy: { rank: "asc" },
+      take: 10,
+    }),
+    prisma.pokemon.findMany({
+      where: { slug: { in: [...CHAMPIONS_MC_ADDITIONS] }, games: { contains: '"pokemon-champions"' } },
+      orderBy: [{ dexNo: "asc" }, { slug: "asc" }],
+    }),
+  ]);
+  const megas = CHAMPIONS_MC_MEGAS.flatMap((slug) => additions.filter((p) => p.slug === slug));
+  const usageSources = [...new Set(top.map((p) => usageRegulation(p.usageStats)).filter(Boolean))];
+  const hasCurrentUsage = usageSources.length === 1 && usageSources[0] === CURRENT_REGULATION;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
@@ -39,6 +49,7 @@ export default async function HubPage({
         <p className="mt-3 max-w-2xl text-base opacity-95 sm:text-lg">
           {t("heroSubtitle")}
         </p>
+        <p className="mt-3 text-sm font-medium opacity-90">{t("regulationPeriod")}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/pokemon-champions/team-builder"
@@ -55,11 +66,50 @@ export default async function HubPage({
         </div>
       </section>
 
+      <section className="mt-10" aria-labelledby="new-pokemon-title">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="new-pokemon-title" className="text-xl font-bold tracking-tight">{t("newTitle")}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-zinc-500">{t("newSubtitle")}</p>
+          </div>
+          <a href={REGULATION_MC_SOURCE} target="_blank" rel="noreferrer" className="text-sm font-medium text-red-600 dark:text-orange-400">
+            {t("officialRules")}
+          </a>
+        </div>
+        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {megas.map((p) => (
+            <li key={p.slug}>
+              <Link href={`/pokemon-champions/pokemon/${p.slug}`} className="group flex h-full flex-col items-center rounded-xl border border-orange-200 bg-orange-50/60 p-3 text-center transition-colors hover:bg-orange-100 dark:border-orange-900 dark:bg-zinc-900 dark:hover:bg-zinc-800">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400">{t("newMega")}</span>
+                <Image src={p.spriteUrl} width={112} height={112} alt={localizedPokemonName(p, locale as Locale)} className="my-2 h-28 w-28 object-contain transition-transform group-hover:scale-105" />
+                <span className="text-sm font-semibold">{localizedPokemonName(p, locale as Locale)}</span>
+                <div className="mt-2 flex flex-wrap justify-center gap-1">
+                  <TypeChip type={p.type1 as PokemonType} size="sm" />
+                  {p.type2 ? <TypeChip type={p.type2 as PokemonType} size="sm" /> : null}
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <details className="mt-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+          <summary className="cursor-pointer text-sm font-semibold">{t("allNewPokemon")}</summary>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {additions.filter((p) => !p.slug.includes("-mega")).map((p) => (
+              <li key={p.slug}>
+                <Link href={`/pokemon-champions/pokemon/${p.slug}`} className="block rounded-full bg-zinc-100 px-3 py-1.5 text-sm hover:bg-orange-100 dark:bg-zinc-800 dark:hover:bg-zinc-700">
+                  {localizedPokemonName(p, locale as Locale)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
+      </section>
+
       <section className="mt-10">
         <div className="flex items-end justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight">{t("topByUsageTitle")}</h2>
-            <p className="text-sm text-zinc-500">{t("topByUsageSubtitle")}</p>
+            <p className="text-sm text-zinc-500">{t("topByUsageSubtitle", { regulation: usageSources.join(" / ") || t("usageUnknown") })}</p>
           </div>
           <Link
             href="/pokemon-champions/pokemon"
@@ -68,6 +118,7 @@ export default async function HubPage({
             {t("seeFullList")}
           </Link>
         </div>
+        {!hasCurrentUsage && <p className="mt-3 text-sm text-zinc-500">{t("usagePending")}</p>}
 
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
           {top.map((p) => (
